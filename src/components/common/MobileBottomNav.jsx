@@ -34,8 +34,10 @@ export default function MobileBottomNav() {
     leaves,
     isCreateModalOpen,
     setIsCreateModalOpen,
+    editingTask,
     selectedTaskId,
-    setViewingUserProfile,
+    viewingUserProfile,
+    isRegisterModalOpen,
     logout,
     deviceMode,
     toggleDeviceMode
@@ -61,12 +63,33 @@ export default function MobileBottomNav() {
     setIsMoreSheetOpen(false);
   };
 
-  const isModalOrDrawerActive = isCreateModalOpen || !!selectedTaskId || isMoreSheetOpen;
+  const isModalOrDrawerActive =
+    isCreateModalOpen ||
+    !!editingTask ||
+    !!selectedTaskId ||
+    isMoreSheetOpen ||
+    !!viewingUserProfile ||
+    isRegisterModalOpen;
+
+  // FAB is only allowed on task boards / panels, NEVER on chat, leaves, settings, etc.
+  const fabAllowedViews = [
+    'dashboard',
+    'managerPanel',
+    'eaPanel',
+    'employeePanel',
+    'mytasks',
+    'alltasks',
+    'kanban',
+    'calendar',
+    'timeline'
+  ];
+
+  const shouldShowFab = !isModalOrDrawerActive && fabAllowedViews.includes(activeView);
 
   return (
     <>
-      {/* Floating Action Button for Rapid Task Creation (hidden when modal or drawer is open) */}
-      {!isModalOrDrawerActive && (
+      {/* Floating Action Button for Rapid Task Creation (strictly hidden on chat & non-task views) */}
+      {shouldShowFab && (
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="mobile-fab"

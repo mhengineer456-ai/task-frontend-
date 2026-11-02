@@ -77,9 +77,19 @@ function MainLayout() {
             minHeight: 0,
             overflowY: activeView === 'chat' ? 'hidden' : 'auto',
             overflowX: 'hidden',
-            height: isMobileView ? 'calc(100vh - 60px)' : 'calc(100vh - 68px)',
-            maxHeight: isMobileView ? 'calc(100vh - 60px)' : 'calc(100vh - 68px)',
-            paddingBottom: isMobileView ? 'calc(100px + env(safe-area-inset-bottom, 0px))' : undefined
+            height: isMobileView
+              ? (activeView === 'chat'
+                  ? 'calc(100vh - 60px - 64px - env(safe-area-inset-bottom, 0px))'
+                  : 'calc(100vh - 60px)')
+              : 'calc(100vh - 68px)',
+            maxHeight: isMobileView
+              ? (activeView === 'chat'
+                  ? 'calc(100vh - 60px - 64px - env(safe-area-inset-bottom, 0px))'
+                  : 'calc(100vh - 60px)')
+              : 'calc(100vh - 68px)',
+            paddingBottom: (isMobileView && activeView !== 'chat')
+              ? 'calc(100px + env(safe-area-inset-bottom, 0px))'
+              : 0
           }}
         >
           {activeView === 'dashboard' && (
@@ -107,8 +117,10 @@ function MainLayout() {
           {activeView === 'audit' && <AuditLogsView />}
           {activeView === 'settings' && <SettingsView />}
 
-          {/* Guaranteed Safe Clearance Spacer on Mobile so no component is ever hidden behind bottom bar or FAB */}
-          {isMobileView && <div style={{ height: '70px', width: '100%', flexShrink: 0, pointerEvents: 'none' }} aria-hidden="true" />}
+          {/* Guaranteed Safe Clearance Spacer on Mobile (only for scrollable pages, NOT fixed-dock chat) */}
+          {isMobileView && activeView !== 'chat' && (
+            <div style={{ height: '70px', width: '100%', flexShrink: 0, pointerEvents: 'none' }} aria-hidden="true" />
+          )}
         </main>
       </div>
 

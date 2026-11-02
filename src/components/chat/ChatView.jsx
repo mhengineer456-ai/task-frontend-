@@ -2776,7 +2776,7 @@ export default function ChatView() {
             style={{ display: 'none' }}
           />
 
-          <form onSubmit={handleSend} style={{ padding: '0.85rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', position: 'relative' }}>
+          <form onSubmit={handleSend} className="chat-input-form" style={{ padding: '0.85rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', position: 'relative' }}>
             {/* Executive Tagged User & EA Follow-up Bar */}
             {taggedUser && (
               <div
@@ -3227,6 +3227,7 @@ export default function ChatView() {
                 <button
                   type="button"
                   onClick={startRecording}
+                  className="chat-voice-btn"
                   style={{
                     background: '#e0f2fe',
                     border: '1px solid #bae6fd',
@@ -3250,7 +3251,7 @@ export default function ChatView() {
                 {/* Send Button */}
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-primary chat-send-btn"
                   style={{ padding: '0.65rem 1.15rem', display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}
                 >
                   <Send style={{ width: '16px', height: '16px' }} />
