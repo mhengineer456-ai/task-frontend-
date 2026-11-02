@@ -155,9 +155,6 @@ export default function Sidebar() {
       <aside
         className={`app-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}
         style={{
-          width: isSidebarCollapsed ? '78px' : '285px',
-          minWidth: isSidebarCollapsed ? '78px' : '285px',
-          maxWidth: isSidebarCollapsed ? '78px' : '285px',
           transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >

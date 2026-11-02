@@ -62,37 +62,12 @@ function MainLayout() {
   }, [activeView]);
 
   return (
-    <div className={`app-container ${isMobileView ? 'device-mode-mobile' : 'device-mode-web'} ${deviceMode === 'mobile' ? 'force-mobile-active' : ''}`}>
-      {/* Floating Exit Button on Desktop when Mobile Simulator is active */}
-      {deviceMode === 'mobile' && (
-        <button
-          type="button"
-          onClick={() => setDeviceMode('web')}
-          className="desktop-exit-mobile-pill"
-          title="Exit Mobile Simulator & Switch to Desktop Web App"
-        >
-          <Monitor style={{ width: '15px', height: '15px' }} />
-          <span>Exit Mobile View • Switch to Web App</span>
-        </button>
-      )}
-
-      {/* Sidebar */}
+    <div className={`app-container ${isMobileView ? 'device-mode-mobile' : 'device-mode-web'}`}>
+      {/* Sidebar (desktop sidebar or slide-over drawer on mobile) */}
       <Sidebar />
 
       {/* Main Content Area */}
       <div className="main-content-wrapper">
-        {/* Simulated Phone Top Status Bar (Only visible in desktop simulator mode) */}
-        {deviceMode === 'mobile' && (
-          <div className="simulated-device-status-bar">
-            <span className="status-bar-time">9:41</span>
-            <div className="dynamic-island-pill" />
-            <div className="status-bar-icons">
-              <span style={{ fontSize: '0.62rem', fontWeight: 800 }}>5G</span>
-              <div className="status-bar-battery"><div className="battery-level" /></div>
-            </div>
-          </div>
-        )}
-
         <Header onOpenNotifications={() => setIsNotificationsOpen(true)} />
 
         <main
@@ -102,8 +77,8 @@ function MainLayout() {
             minHeight: 0,
             overflowY: activeView === 'chat' ? 'hidden' : 'auto',
             overflowX: 'hidden',
-            height: 'calc(100vh - 68px)',
-            maxHeight: 'calc(100vh - 68px)',
+            height: isMobileView ? 'calc(100vh - 60px)' : 'calc(100vh - 68px)',
+            maxHeight: isMobileView ? 'calc(100vh - 60px)' : 'calc(100vh - 68px)',
             paddingBottom: isMobileView ? 'calc(76px + env(safe-area-inset-bottom))' : undefined
           }}
         >

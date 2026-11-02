@@ -65,7 +65,7 @@ export default function ManagerPanelView() {
       </div>
 
       {/* Manager Summary Stats */}
-      <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-1" style={{ gap: '0.85rem' }}>
+      <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
         <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>My Direct Reports</span>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--brand-primary)', fontFamily: 'monospace' }}>
@@ -75,11 +75,11 @@ export default function ManagerPanelView() {
         </div>
 
         <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Pending Team Approvals</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Pending Approvals</span>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-warning)', fontFamily: 'monospace' }}>
             {pendingTeamApprovals.length} Tasks
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Requires Manager Sign-off</span>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sign-off Required</span>
         </div>
 
         <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -91,7 +91,7 @@ export default function ManagerPanelView() {
         </div>
 
         <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Avg Team KPI Score</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Avg Team KPI</span>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-success)', fontFamily: 'monospace' }}>
             94.8%
           </div>
@@ -100,14 +100,14 @@ export default function ManagerPanelView() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-        <button onClick={() => { setActiveTab('directReports'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'directReports' ? 'btn-primary' : 'btn-secondary'}`}>
-          <Users style={{ width: '14px', height: '14px' }} /> Direct Reports & KPI Matrix ({directReports.length})
+      <div className="mobile-task-tabs-strip" style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+        <button onClick={() => { setActiveTab('directReports'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'directReports' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.45rem 0.85rem' }}>
+          <Users style={{ width: '14px', height: '14px' }} /> Direct Reports ({directReports.length})
         </button>
-        <button onClick={() => { setActiveTab('approvals'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'approvals' ? 'btn-primary' : 'btn-secondary'}`}>
-          <CheckSquare style={{ width: '14px', height: '14px' }} /> Team Approval Queue ({pendingTeamApprovals.length})
+        <button onClick={() => { setActiveTab('approvals'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'approvals' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.45rem 0.85rem' }}>
+          <CheckSquare style={{ width: '14px', height: '14px' }} /> Approvals Queue ({pendingTeamApprovals.length})
         </button>
-        <button onClick={() => { setActiveTab('workload'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'workload' ? 'btn-primary' : 'btn-secondary'}`}>
+        <button onClick={() => { setActiveTab('workload'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'workload' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.45rem 0.85rem' }}>
           <Briefcase style={{ width: '14px', height: '14px' }} /> Team Task Delegation
         </button>
       </div>

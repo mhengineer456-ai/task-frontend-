@@ -57,7 +57,7 @@ export default function EmployeePanelView() {
       </div>
 
       {/* Employee Top Metric Bar */}
-      <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-1" style={{ gap: '0.85rem' }}>
+      <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
         <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Due Today</span>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#60a5fa', fontFamily: 'monospace' }}>

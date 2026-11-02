@@ -187,7 +187,7 @@ export default function EaDashboardView() {
       </div>
 
       {/* Stats Gauges Bar */}
-      <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-1" style={{ gap: '1.25rem' }}>
+      <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
         <div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid #bae6fd', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase' }}>Daily Routine Compliance</div>
           <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0c4a6e', margin: '0.25rem 0' }}>

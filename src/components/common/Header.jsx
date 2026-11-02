@@ -121,29 +121,29 @@ export default function Header({ onOpenNotifications }) {
           /* ==========================================================================
              DEDICATED SLEEK MOBILE APP BAR (Ultra-clean, native phone aesthetics)
              ========================================================================== */
-          <div className="mobile-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
-            {/* Left: Avatar / Menu Trigger & View Title */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <div className="mobile-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
+            {/* Left: Avatar & View Title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="mobile-avatar-btn"
-                title="Toggle Menu"
+                title="Toggle Navigation Menu"
                 aria-label="Toggle navigation menu"
-                style={{ position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                style={{ position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}
               >
                 <img
                   src={activeUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
                   alt={activeUser?.name}
-                  style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--brand-primary)', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
+                  style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--brand-primary)', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
                 />
                 <span
                   style={{
                     position: 'absolute',
                     bottom: '-1px',
                     right: '-1px',
-                    width: '10px',
-                    height: '10px',
+                    width: '9px',
+                    height: '9px',
                     borderRadius: '50%',
                     background: '#10b981',
                     border: '2px solid var(--bg-header)'
@@ -152,22 +152,23 @@ export default function Header({ onOpenNotifications }) {
                 />
               </button>
 
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+              <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {getViewTitle()}
                 </div>
-                <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>{activeUser?.role || 'Team'}</span>
+                <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span>{activeUser?.name || 'User'}</span>
                   <span>•</span>
+                  <span>{activeUser?.role || 'Team'}</span>
                   <span style={{ color: isBackendConnected ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
-                    {isBackendConnected ? 'Online' : 'Local'}
+                    ({isBackendConnected ? 'Online' : 'Local'})
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Right: Switch to Web + Search + Notifications + Theme */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            {/* Right: Switch to Web + Search + Notifications + Theme + Menu */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
               {/* Primary Switch to Web App Toggle Button */}
               <button
                 type="button"
@@ -176,7 +177,7 @@ export default function Header({ onOpenNotifications }) {
                 title="Switch to Desktop / Web App layout"
               >
                 <Monitor style={{ width: '13px', height: '13px', color: 'var(--brand-primary)' }} />
-                <span>Web App</span>
+                <span>Web</span>
               </button>
 
               {/* Fast Search Trigger (Cmd+K) */}
@@ -184,10 +185,10 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={() => setIsCommandPaletteOpen(true)}
                 className="btn-icon"
-                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                style={{ padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
                 title="Search tasks & commands (Ctrl+K)"
               >
-                <Search style={{ width: '16px', height: '16px', color: 'var(--text-primary)' }} />
+                <Search style={{ width: '15px', height: '15px', color: 'var(--text-primary)' }} />
               </button>
 
               {/* Notifications */}
@@ -195,10 +196,10 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={onOpenNotifications}
                 className="btn-icon"
-                style={{ position: 'relative', padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                style={{ position: 'relative', padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
                 title="Notifications"
               >
-                <Bell style={{ width: '16px', height: '16px', color: 'var(--text-primary)' }} />
+                <Bell style={{ width: '15px', height: '15px', color: 'var(--text-primary)' }} />
                 {unreadCount > 0 && (
                   <span
                     style={{
@@ -208,9 +209,9 @@ export default function Header({ onOpenNotifications }) {
                       background: '#ef4444',
                       color: '#ffffff',
                       borderRadius: '99px',
-                      minWidth: '15px',
-                      height: '15px',
-                      fontSize: '0.6rem',
+                      minWidth: '14px',
+                      height: '14px',
+                      fontSize: '0.58rem',
                       fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
@@ -228,13 +229,13 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="btn-icon"
-                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                style={{ padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
                 title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
               >
                 {theme === 'dark' ? (
-                  <Sun style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
+                  <Sun style={{ width: '15px', height: '15px', color: '#f59e0b' }} />
                 ) : (
-                  <Moon style={{ width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
+                  <Moon style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
                 )}
               </button>
 
@@ -243,10 +244,10 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="btn-icon"
-                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                style={{ padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
                 title="Open Sidebar Navigation"
               >
-                <Menu style={{ width: '17px', height: '17px', color: 'var(--brand-primary)' }} />
+                <Menu style={{ width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
               </button>
             </div>
           </div>
