@@ -1,4 +1,11 @@
-export const SERVER_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+const rawUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+let normalizedUrl = rawUrl;
+if (!/^https?:\/\//i.test(normalizedUrl)) {
+  normalizedUrl = `https://${normalizedUrl}`;
+}
+normalizedUrl = normalizedUrl.replace(/\/api\/?$/i, '');
+
+export const SERVER_URL = normalizedUrl;
 export const BASE_URL = `${SERVER_URL}/api`;
 
 export const apiClient = {
