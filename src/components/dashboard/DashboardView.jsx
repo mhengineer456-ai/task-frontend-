@@ -56,7 +56,7 @@ export default function DashboardView() {
   return (
     <div className="view-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Welcome Banner */}
-      <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', border: 'none', color: '#ffffff', boxShadow: '0 8px 25px rgba(2, 132, 199, 0.25)' }}>
+      <div className="glass-panel dashboard-hero-banner" style={{ padding: '1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', border: 'none', color: '#ffffff', boxShadow: '0 8px 25px rgba(2, 132, 199, 0.25)' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
             <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.2)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.3)' }}>Executive Overview</span>

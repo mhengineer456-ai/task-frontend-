@@ -188,39 +188,39 @@ export default function EaDashboardView() {
 
       {/* Stats Gauges Bar */}
       <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
-        <div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid #bae6fd', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase' }}>Daily Routine Compliance</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0c4a6e', margin: '0.25rem 0' }}>
+        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #0284c7' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--brand-light)', textTransform: 'uppercase' }}>Daily Routine Compliance</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38bdf8', margin: '0.25rem 0', fontFamily: 'monospace' }}>
             {completedDailyCount} / {totalDailyCount} ({dailyCompliancePercentage}%)
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Live MD Screen Monitor</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Live MD Screen Monitor</div>
         </div>
 
-        <div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid #bbf7d0', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#166534', textTransform: 'uppercase' }}>Allotted Executive Meetings</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#14532d', margin: '0.25rem 0' }}>{meetings.length} Scheduled</div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Synced with MD Agenda</div>
+        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #10b981' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase' }}>Allotted Executive Meetings</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34d399', margin: '0.25rem 0', fontFamily: 'monospace' }}>{meetings.length} Scheduled</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Synced with MD Agenda</div>
         </div>
 
-        <div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid #fde68a', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase' }}>Active Task Follow-ups</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#92400e', margin: '0.25rem 0' }}>{followUps.length} Actions Logged</div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Active assignee pings</div>
+        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #f59e0b' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase' }}>Active Task Follow-ups</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fbbf24', margin: '0.25rem 0', fontFamily: 'monospace' }}>{followUps.length} Actions Logged</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Active assignee pings</div>
         </div>
 
-        <div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid #fecaca', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase' }}>Escalated to MD</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#991b1b', margin: '0.25rem 0' }}>
+        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #f43f5e' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f43f5e', textTransform: 'uppercase' }}>Escalated to MD</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f87171', margin: '0.25rem 0', fontFamily: 'monospace' }}>
             {escalatedCount} Blockers
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700 }}>Requires MD Action</div>
+          <div style={{ fontSize: '0.7rem', color: '#f43f5e', fontWeight: 700 }}>Requires MD Action</div>
         </div>
       </div>
 
       {/* Main Grid: Executive Meetings vs EA Daily Routine Working Lines */}
       <div className="grid grid-cols-2 sm-grid-cols-1" style={{ gap: '1.5rem' }}>
         {/* Section 1: Executive Meeting Scheduler & Calendar Widget */}
-        <div style={{ background: '#ffffff', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid #bae6fd', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Calendar style={{ width: '18px', height: '18px', color: '#0284c7' }} />
@@ -282,7 +282,7 @@ export default function EaDashboardView() {
         </div>
 
         {/* Section 2: EA Daily Routine Tasks / Working Lines Compliance Checklist */}
-        <div style={{ background: '#ffffff', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid #bae6fd', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
