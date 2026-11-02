@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   Kanban,
   Calendar,
-  Layers
+  Layers,
+  Smartphone,
+  Monitor
 } from 'lucide-react';
 
 export default function Header({ onOpenNotifications }) {
@@ -50,7 +52,11 @@ export default function Header({ onOpenNotifications }) {
     setViewingUserProfile,
     isBackendConnected,
     isMobileMenuOpen,
-    setIsMobileMenuOpen
+    setIsMobileMenuOpen,
+    deviceMode,
+    setDeviceMode,
+    toggleDeviceMode,
+    isMobileView
   } = useTaskContext();
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -111,77 +117,214 @@ export default function Header({ onOpenNotifications }) {
   return (
     <>
       <header className="app-header">
-        {/* Left Section: Mobile Toggle & Command Search Bar */}
-        <div className="header-left-group" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0, maxWidth: '580px' }}>
-          {/* Mobile Menu Hamburger */}
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="mobile-menu-toggle"
-            title="Toggle Navigation Menu"
-            aria-label="Toggle navigation menu"
-          >
-            <Menu style={{ width: '22px', height: '22px', color: 'var(--brand-primary)' }} />
-          </button>
-
-          {/* Breadcrumb Navigation on Desktop */}
-          <div className="header-breadcrumb header-label-desktop" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-            <span style={{ cursor: 'pointer', color: 'var(--text-secondary)' }} onClick={() => setActiveView('dashboard')}>
-              TaskPulse
-            </span>
-            <ChevronRight style={{ width: '13px', height: '13px', opacity: 0.5 }} />
-            <span style={{ color: 'var(--brand-primary)', fontWeight: 800 }}>
-              {getViewTitle()}
-            </span>
-          </div>
-
-          {/* Global Command Palette Trigger Bar */}
-          <div
-            onClick={() => setIsCommandPaletteOpen(true)}
-            className="search-container"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              cursor: 'pointer'
-            }}
-            title="Click or press Ctrl+K to open Command Palette"
-          >
-            <div
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                background: 'var(--bg-input)',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                padding: '0.5rem 0.85rem 0.5rem 2.4rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Search style={{ position: 'absolute', left: '10px', width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
-              <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)', userSelect: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Search tasks, commands, lots...
-              </span>
-              <span
-                className="header-label-desktop"
-                style={{
-                  position: 'absolute',
-                  right: '8px',
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  padding: '2px 6px',
-                  borderRadius: '6px',
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-muted)',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                }}
+        {isMobileView ? (
+          /* ==========================================================================
+             DEDICATED SLEEK MOBILE APP BAR (Ultra-clean, native phone aesthetics)
+             ========================================================================== */
+          <div className="mobile-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+            {/* Left: Avatar / Menu Trigger & View Title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="mobile-avatar-btn"
+                title="Toggle Menu"
+                aria-label="Toggle navigation menu"
+                style={{ position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
-                ⌘K
-              </span>
+                <img
+                  src={activeUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                  alt={activeUser?.name}
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--brand-primary)', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
+                />
+                <span
+                  style={{
+                    position: 'absolute',
+                    bottom: '-1px',
+                    right: '-1px',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: '#10b981',
+                    border: '2px solid var(--bg-header)'
+                  }}
+                  title="Online"
+                />
+              </button>
+
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                  {getViewTitle()}
+                </div>
+                <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>{activeUser?.role || 'Team'}</span>
+                  <span>•</span>
+                  <span style={{ color: isBackendConnected ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                    {isBackendConnected ? 'Online' : 'Local'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Switch to Web + Search + Notifications + Theme */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              {/* Primary Switch to Web App Toggle Button */}
+              <button
+                type="button"
+                onClick={toggleDeviceMode}
+                className="btn-mobile-mode-switch"
+                title="Switch to Desktop / Web App layout"
+              >
+                <Monitor style={{ width: '13px', height: '13px', color: 'var(--brand-primary)' }} />
+                <span>Web App</span>
+              </button>
+
+              {/* Fast Search Trigger (Cmd+K) */}
+              <button
+                type="button"
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="btn-icon"
+                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                title="Search tasks & commands (Ctrl+K)"
+              >
+                <Search style={{ width: '16px', height: '16px', color: 'var(--text-primary)' }} />
+              </button>
+
+              {/* Notifications */}
+              <button
+                type="button"
+                onClick={onOpenNotifications}
+                className="btn-icon"
+                style={{ position: 'relative', padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                title="Notifications"
+              >
+                <Bell style={{ width: '16px', height: '16px', color: 'var(--text-primary)' }} />
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      borderRadius: '99px',
+                      minWidth: '15px',
+                      height: '15px',
+                      fontSize: '0.6rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)'
+                    }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Dark/Light Mode */}
+              <button
+                type="button"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="btn-icon"
+                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+              >
+                {theme === 'dark' ? (
+                  <Sun style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
+                ) : (
+                  <Moon style={{ width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
+                )}
+              </button>
+
+              {/* Hamburger drawer button */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="btn-icon"
+                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
+                title="Open Sidebar Navigation"
+              >
+                <Menu style={{ width: '17px', height: '17px', color: 'var(--brand-primary)' }} />
+              </button>
             </div>
           </div>
-        </div>
+        ) : (
+          /* ==========================================================================
+             DESKTOP WEB APP HEADER BAR
+             ========================================================================== */
+          <>
+            {/* Left Section: Mobile Toggle & Command Search Bar */}
+            <div className="header-left-group" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0, maxWidth: '580px' }}>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="mobile-menu-toggle"
+                title="Toggle Navigation Menu"
+                aria-label="Toggle navigation menu"
+              >
+                <Menu style={{ width: '22px', height: '22px', color: 'var(--brand-primary)' }} />
+              </button>
+
+              {/* Breadcrumb Navigation on Desktop */}
+              <div className="header-breadcrumb header-label-desktop" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                <span style={{ cursor: 'pointer', color: 'var(--text-secondary)' }} onClick={() => setActiveView('dashboard')}>
+                  TaskPulse
+                </span>
+                <ChevronRight style={{ width: '13px', height: '13px', opacity: 0.5 }} />
+                <span style={{ color: 'var(--brand-primary)', fontWeight: 800 }}>
+                  {getViewTitle()}
+                </span>
+              </div>
+
+              {/* Global Command Palette Trigger Bar */}
+              <div
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="search-container"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  cursor: 'pointer'
+                }}
+                title="Click or press Ctrl+K to open Command Palette"
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: 'var(--bg-input)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    padding: '0.5rem 0.85rem 0.5rem 2.4rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Search style={{ position: 'absolute', left: '10px', width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
+                  <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)', userSelect: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Search tasks, commands, lots...
+                  </span>
+                  <span
+                    className="header-label-desktop"
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '2px 6px',
+                      borderRadius: '6px',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-muted)',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    ⌘K
+                  </span>
+                </div>
+              </div>
+            </div>
 
         {/* Right Section: Actions & Badges */}
         <div className="header-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -242,6 +385,30 @@ export default function Header({ onOpenNotifications }) {
             />
             <Database style={{ width: '13px', height: '13px', flexShrink: 0 }} />
             <span className="header-label-desktop">{isBackendConnected ? 'Live DB' : 'Local'}</span>
+          </div>
+
+          {/* Primary Switch to Mobile / Switch to Web App Button */}
+          <div className="header-device-mode-switch" title="Toggle between Mobile View & Desktop Web App View">
+            <button
+              type="button"
+              onClick={toggleDeviceMode}
+              className={`btn-device-mode-toggle ${isMobileView ? 'mobile-active' : 'web-active'}`}
+              aria-label={isMobileView ? "Switch to Desktop / Web App" : "Switch to Mobile View"}
+            >
+              <div className="toggle-icon-wrap">
+                {isMobileView ? (
+                  <Monitor style={{ width: '15px', height: '15px' }} />
+                ) : (
+                  <Smartphone style={{ width: '15px', height: '15px' }} />
+                )}
+              </div>
+              <span className="toggle-label-text">
+                {isMobileView ? 'Switch to Web App' : 'Switch to Mobile'}
+              </span>
+              <span className="toggle-current-badge">
+                {isMobileView ? '📱 Mobile' : '💻 Web'}
+              </span>
+            </button>
           </div>
 
           {/* PulseBot AI Quick Shortcut */}
@@ -435,6 +602,8 @@ export default function Header({ onOpenNotifications }) {
             )}
           </button>
         </div>
+          </>
+        )}
       </header>
 
       {/* Global Command Palette (Ctrl+K Modal) */}

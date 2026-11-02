@@ -116,6 +116,38 @@ export const TaskProvider = ({ children }) => {
   const [editingTask, setEditingTask] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Device Mode: 'mobile' vs 'web'
+  const [deviceMode, setDeviceModeState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('taskpulse_device_mode');
+      if (saved === 'mobile' || saved === 'web') return saved;
+      return typeof window !== 'undefined' && window.innerWidth <= 768 ? 'mobile' : 'web';
+    } catch (e) {
+      return 'web';
+    }
+  });
+
+  const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const setDeviceMode = (mode) => {
+    setDeviceModeState(mode);
+    try {
+      localStorage.setItem('taskpulse_device_mode', mode);
+    } catch (e) {}
+  };
+
+  const toggleDeviceMode = () => {
+    setDeviceMode(deviceMode === 'mobile' ? 'web' : 'mobile');
+  };
+
+  const isMobileView = deviceMode === 'mobile' || (deviceMode !== 'web' && windowWidth <= 768);
+
   useEffect(() => {
     if (activeUser && activeUser.id) {
       if (activeUser.role === 'Admin' || activeUser.role === 'MD') {
@@ -1981,7 +2013,11 @@ export const TaskProvider = ({ children }) => {
         accentTheme,
         setAccentTheme: updateAccentTheme,
         isSidebarCollapsed,
-        toggleSidebarCollapsed
+        toggleSidebarCollapsed,
+        deviceMode,
+        setDeviceMode,
+        toggleDeviceMode,
+        isMobileView
       }}
 
     >

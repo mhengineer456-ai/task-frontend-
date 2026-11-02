@@ -10,7 +10,10 @@ import {
   TrendingUp,
   Activity,
   Layers,
-  Plus
+  Plus,
+  Sparkles,
+  ListTodo,
+  Zap
 } from 'lucide-react';
 
 export default function DashboardView() {
@@ -22,7 +25,9 @@ export default function DashboardView() {
     setIsCreateModalOpen,
     activeUser,
     eaDailyTasks,
-    eaMeetings
+    eaMeetings,
+    setActiveView,
+    isMobileView
   } = useTaskContext();
 
   const dailyTasks = eaDailyTasks || [];
@@ -73,10 +78,49 @@ export default function DashboardView() {
         </button>
       </div>
 
+      {/* Mobile & Tablet Quick Action Chips */}
+      <div className="mobile-quick-chips-bar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+        <button
+          type="button"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="quick-action-chip brand-chip"
+        >
+          <Plus style={{ width: '14px', height: '14px' }} />
+          <span>New Task</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('chat')}
+          className="quick-action-chip ai-chip"
+        >
+          <Sparkles style={{ width: '14px', height: '14px' }} />
+          <span>Ask PulseBot</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('mytasks')}
+          className="quick-action-chip neutral-chip"
+        >
+          <ListTodo style={{ width: '14px', height: '14px' }} />
+          <span>My Tasks ({tasks.filter(t => t.assigneeId === activeUser?.id).length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('approvals')}
+          className="quick-action-chip warning-chip"
+        >
+          <CheckCircle2 style={{ width: '14px', height: '14px' }} />
+          <span>Approvals ({tasks.filter(t => t.status === 'Review').length})</span>
+        </button>
+      </div>
+
       {/* 👑 EA Daily Routine Performance & Compliance Card (MD Live Monitor - Hidden for Managers & Employees) */}
       {(activeUser?.role === 'EA' || activeUser?.role === 'MD') && (
         <div className="glass-panel" style={{ padding: '1.25rem', background: '#ffffff', border: '1px solid #bae6fd', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
               <img
                 src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
@@ -84,9 +128,9 @@ export default function DashboardView() {
                 style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0284c7' }}
               />
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    👑 Executive Assistant (EA) Daily Routine Compliance & Progress Card
+                    👑 EA Daily Routine Compliance Card
                   </h3>
                   <span style={{ fontSize: '0.65rem', fontWeight: 800, background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '4px' }}>
                     Rachel Green (EA)
@@ -110,13 +154,13 @@ export default function DashboardView() {
                 background: eaCompliancePercentage >= 80 ? '#dcfce7' : '#fef3c7',
                 color: eaCompliancePercentage >= 80 ? '#166534' : '#92400e'
               }}>
-                {eaCompliancePercentage >= 80 ? '✅ Working On Track' : '⚠️ Action Pending'}
+                {eaCompliancePercentage >= 80 ? '✅ On Track' : '⚠️ Action Pending'}
               </span>
             </div>
           </div>
 
           {/* Live Daily Routine Task List */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
+          <div className="ea-routine-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '0.75rem' }}>
             {dailyTasks.map(t => (
               <div key={t.id} style={{ background: t.completed ? '#f0fdf4' : '#f8fafc', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: t.completed ? '1px solid #bbf7d0' : '1px solid #cbd5e1' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
@@ -135,7 +179,7 @@ export default function DashboardView() {
       )}
 
       {/* 6 Core Metric Cards */}
-      <div className="grid grid-cols-6 lg-grid-cols-2 sm-grid-cols-1" style={{ gap: '1rem' }}>
+      <div className="grid grid-cols-6 lg-grid-cols-3 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
         <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total Tasks</span>

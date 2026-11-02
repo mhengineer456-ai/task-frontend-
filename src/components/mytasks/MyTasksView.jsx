@@ -105,16 +105,16 @@ export default function MyTasksView() {
       </div>
 
       {/* 2. Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', overflowX: 'auto' }}>
+      <div className="mobile-task-tabs-strip" style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.65rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`btn ${activeTab === t.id ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem' }}
+            style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap' }}
           >
             <span>{t.label}</span>
-            <span className={`badge ${t.badgeClass || 'badge-brand'}`} style={{ padding: '1px 6px', fontSize: '0.65rem' }}>
+            <span className={`badge ${t.badgeClass || 'badge-brand'}`} style={{ padding: '1px 7px', fontSize: '0.65rem' }}>
               {t.count}
             </span>
           </button>
@@ -312,23 +312,23 @@ export default function MyTasksView() {
                   </div>
 
                   {/* Primary Action Buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', paddingTop: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', paddingTop: '0.35rem' }}>
                     {/* + Update Progress Button */}
                     <button
                       type="button"
                       onClick={() => setProgressModalTaskId(t.id)}
                       className="btn btn-primary"
-                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', fontWeight: 800, flex: 1, gap: '0.35rem' }}
+                      style={{ padding: '0.45rem 0.85rem', minHeight: '38px', fontSize: '0.78rem', fontWeight: 800, flex: 1, gap: '0.35rem' }}
                       title="Update progress, set expected date, or log reason if not started"
                     >
-                      <TrendingUp style={{ width: '13px', height: '13px' }} />
+                      <TrendingUp style={{ width: '14px', height: '14px' }} />
                       <span>+ Update Progress</span>
                     </button>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       {!isDone && (
-                        <button onClick={() => startTimer(t.id)} className="btn-icon" title="Start timer">
-                          <Play style={{ width: '13px', height: '13px', color: 'var(--brand-primary)' }} />
+                        <button onClick={() => startTimer(t.id)} className="btn-icon" style={{ minWidth: '38px', minHeight: '38px' }} title="Start timer">
+                          <Play style={{ width: '14px', height: '14px', color: 'var(--brand-primary)' }} />
                         </button>
                       )}
 
@@ -336,14 +336,14 @@ export default function MyTasksView() {
                         <button
                           onClick={() => changeTaskStatus(t.id, 'Completed')}
                           className="btn btn-secondary"
-                          style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', color: '#10b981', fontWeight: 700 }}
+                          style={{ padding: '0.45rem 0.75rem', minHeight: '38px', fontSize: '0.75rem', color: '#10b981', fontWeight: 700 }}
                           title="Mark task as complete"
                         >
-                          <Check style={{ width: '13px', height: '13px' }} /> Done
+                          <Check style={{ width: '14px', height: '14px' }} /> Done
                         </button>
                       ) : (
-                        <span className="badge badge-emerald" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <CheckCircle2 style={{ width: '12px', height: '12px' }} /> Done
+                        <span className="badge badge-emerald" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '6px 10px' }}>
+                          <CheckCircle2 style={{ width: '14px', height: '14px' }} /> Done
                         </span>
                       )}
                     </div>
