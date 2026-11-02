@@ -55,30 +55,103 @@ export default function DashboardView() {
 
   return (
     <div className="view-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Welcome Banner */}
-      <div className="glass-panel dashboard-hero-banner" style={{ padding: '1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', border: 'none', color: '#ffffff', boxShadow: '0 8px 25px rgba(2, 132, 199, 0.25)' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-            <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.2)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.3)' }}>Executive Overview</span>
-            <span style={{ fontSize: '0.75rem', color: '#e0f2fe', fontWeight: 600 }}>
+      {/* Welcome Hero Banner */}
+      <div
+        className="glass-panel dashboard-hero-banner"
+        style={{
+          position: 'relative',
+          padding: '1.75rem 2rem',
+          borderRadius: '22px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1.25rem',
+          background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 48%, #0284c7 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.25)',
+          color: '#ffffff',
+          boxShadow: '0 12px 32px -4px rgba(79, 70, 229, 0.3)',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Subtle decorative glowing glass bubbles */}
+        <div
+          style={{
+            position: 'absolute',
+            right: '-30px',
+            top: '-40px',
+            width: '220px',
+            height: '220px',
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, transparent 65%)',
+            borderRadius: '50%',
+            pointerEvents: 'none'
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '35%',
+            bottom: '-60px',
+            width: '180px',
+            height: '180px',
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 65%)',
+            borderRadius: '50%',
+            pointerEvents: 'none'
+          }}
+        />
+
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                background: 'rgba(255, 255, 255, 0.22)',
+                color: '#ffffff',
+                padding: '4px 12px',
+                borderRadius: '99px',
+                border: '1px solid rgba(255, 255, 255, 0.35)',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase'
+              }}
+            >
+              ⚡ Executive Dashboard
+            </span>
+            <span style={{ fontSize: '0.78rem', color: '#e0e7ff', fontWeight: 600 }}>
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </span>
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff' }}>
-            Welcome back, {activeUser.name}! 👋
+
+          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', margin: 0 }}>
+            Welcome back, {activeUser.name || 'Workspace Leader'}! 👋
           </h2>
-          <p style={{ fontSize: '0.85rem', color: '#e0f2fe', marginTop: '0.25rem', fontWeight: 500 }}>
-            Here is what's happening across your projects and teams today.
+          <p style={{ fontSize: '0.88rem', color: '#e0e7ff', marginTop: '0.35rem', fontWeight: 500, maxWidth: '640px', lineHeight: 1.4 }}>
+            Here is your live enterprise snapshot across projects, team workloads, and routine deliverables.
           </p>
         </div>
 
-        <button onClick={() => setIsCreateModalOpen(true)} className="btn" style={{ background: '#ffffff', color: '#0284c7', fontWeight: 800, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-          <Plus style={{ width: '16px', height: '16px', color: '#0284c7' }} />
-          <span>Create New Task</span>
-        </button>
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="btn"
+            style={{
+              background: '#ffffff',
+              color: '#4f46e5',
+              fontWeight: 800,
+              padding: '0.65rem 1.35rem',
+              borderRadius: '14px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+              border: 'none',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Plus style={{ width: '16px', height: '16px', color: '#4f46e5' }} />
+            <span>+ Create New Task</span>
+          </button>
+        </div>
       </div>
 
-      {/* Mobile & Tablet Quick Action Chips */}
+      {/* Mobile & Tablet Quick Action Chips Bar */}
       <div className="mobile-quick-chips-bar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
         <button
           type="button"
@@ -180,73 +253,91 @@ export default function DashboardView() {
 
       {/* 6 Core Metric Cards */}
       <div className="grid grid-cols-6 lg-grid-cols-3 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
-        <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
+        {/* Total Tasks */}
+        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #4f46e5' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total Tasks</span>
-            <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--brand-light)' }}><Layers style={{ width: '16px', height: '16px' }} /></div>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)', border: '1px solid #c7d2fe', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Layers style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>{totalTasks}</span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Active across 6 depts</p>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', display: 'block' }}>{totalTasks}</span>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px' }}>Across 6 depts</p>
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
+        {/* Due Today */}
+        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #0284c7' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Due Today</span>
-            <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}><Calendar style={{ width: '16px', height: '16px' }} /></div>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', border: '1px solid #bae6fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#60a5fa' }}>{dueTodayTasks.length}</span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Requires attention</p>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0284c7', letterSpacing: '-0.02em', display: 'block' }}>{dueTodayTasks.length}</span>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px' }}>Needs focus today</p>
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
+        {/* Overdue */}
+        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #f43f5e' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Overdue</span>
-            <div style={{ padding: '6px', borderRadius: '8px', background: 'var(--color-danger-bg)', color: 'var(--color-danger)' }}><AlertTriangle style={{ width: '16px', height: '16px' }} /></div>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)', border: '1px solid #fecdd3', color: '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-danger)' }}>{overdueTasks.length}</span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Escalation triggered</p>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#f43f5e', letterSpacing: '-0.02em', display: 'block' }}>{overdueTasks.length}</span>
+            <p style={{ fontSize: '0.72rem', color: '#f43f5e', fontWeight: 600, marginTop: '3px' }}>Action required</p>
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
+        {/* In Progress */}
+        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #8b5cf6' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>In Progress</span>
-            <div style={{ padding: '6px', borderRadius: '8px', background: 'var(--color-info-bg)', color: 'var(--color-info)' }}><Clock style={{ width: '16px', height: '16px' }} /></div>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', border: '1px solid #ddd6fe', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-info)' }}>{inProgressTasks}</span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Under active execution</p>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#8b5cf6', letterSpacing: '-0.02em', display: 'block' }}>{inProgressTasks}</span>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px' }}>Active execution</p>
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
+        {/* Completion % */}
+        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #10b981' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Completion %</span>
-            <div style={{ padding: '6px', borderRadius: '8px', background: 'var(--color-success-bg)', color: 'var(--color-success)' }}><TrendingUp style={{ width: '16px', height: '16px' }} /></div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Completion</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', border: '1px solid #a7f3d0', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-success)' }}>{completionRate}%</span>
-            <div style={{ width: '100%', background: 'var(--bg-input)', borderRadius: '99px', height: '6px', marginTop: '8px', overflow: 'hidden' }}>
-              <div style={{ background: 'var(--color-success)', height: '100%', width: `${completionRate}%`, transition: 'width 0.5s ease' }}></div>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#10b981', letterSpacing: '-0.02em', display: 'block' }}>{completionRate}%</span>
+            <div style={{ width: '100%', background: '#e2e8f0', borderRadius: '99px', height: '6px', marginTop: '8px', overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(90deg, #10b981, #06b6d4)', height: '100%', width: `${completionRate}%`, borderRadius: '99px', transition: 'width 0.5s ease' }}></div>
             </div>
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
+        {/* Time Logged */}
+        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #f59e0b' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Time Logged</span>
-            <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.15)', color: 'var(--color-purple)' }}><Activity style={{ width: '16px', height: '16px' }} /></div>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Activity style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-purple)' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#d97706', letterSpacing: '-0.02em', display: 'block' }}>
               {(Math.round(totalActual * 10) / 10).toFixed(1)}h
             </span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>vs {totalEstimated}h estimated</p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px' }}>vs {totalEstimated}h est.</p>
           </div>
         </div>
       </div>

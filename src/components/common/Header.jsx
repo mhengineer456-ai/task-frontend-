@@ -270,11 +270,11 @@ export default function Header({ onOpenNotifications }) {
 
               {/* Breadcrumb Navigation on Desktop */}
               <div className="header-breadcrumb header-label-desktop" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                <span style={{ cursor: 'pointer', color: 'var(--text-secondary)' }} onClick={() => setActiveView('dashboard')}>
-                  TaskPulse
+                <span style={{ cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600 }} onClick={() => setActiveView('dashboard')}>
+                  Workspace
                 </span>
                 <ChevronRight style={{ width: '13px', height: '13px', opacity: 0.5 }} />
-                <span style={{ color: 'var(--brand-primary)', fontWeight: 800 }}>
+                <span style={{ color: 'var(--brand-primary)', fontWeight: 800, background: 'rgba(79, 70, 229, 0.08)', padding: '2px 8px', borderRadius: '6px' }}>
                   {getViewTitle()}
                 </span>
               </div>
@@ -295,30 +295,30 @@ export default function Header({ onOpenNotifications }) {
                     position: 'relative',
                     display: 'flex',
                     alignItems: 'center',
-                    background: 'var(--bg-input)',
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-color)',
+                    background: '#ffffff',
+                    borderRadius: '99px',
+                    border: '1px solid #cbd5e1',
                     padding: '0.5rem 0.85rem 0.5rem 2.4rem',
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <Search style={{ position: 'absolute', left: '10px', width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
+                  <Search style={{ position: 'absolute', left: '12px', width: '15px', height: '15px', color: '#4f46e5' }} />
                   <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)', userSelect: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Search tasks, commands, lots...
+                    Search tasks, team members, commands...
                   </span>
                   <span
                     className="header-label-desktop"
                     style={{
                       position: 'absolute',
-                      right: '8px',
+                      right: '10px',
                       fontSize: '0.68rem',
                       fontWeight: 800,
-                      padding: '2px 6px',
+                      padding: '2px 7px',
                       borderRadius: '6px',
-                      background: 'var(--bg-card)',
-                      border: '1px solid var(--border-color)',
-                      color: 'var(--text-muted)',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                      background: '#f1f5f9',
+                      border: '1px solid #e2e8f0',
+                      color: '#64748b'
                     }}
                   >
                     ⌘K
@@ -364,10 +364,10 @@ export default function Header({ onOpenNotifications }) {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '5px 10px',
-              borderRadius: 'var(--radius-md)',
-              background: isBackendConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-              border: `1px solid ${isBackendConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+              padding: '6px 12px',
+              borderRadius: '99px',
+              background: isBackendConnected ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+              border: `1px solid ${isBackendConnected ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
               fontSize: '0.75rem',
               fontWeight: 700,
               color: isBackendConnected ? '#10b981' : '#f59e0b'
@@ -417,22 +417,23 @@ export default function Header({ onOpenNotifications }) {
             onClick={() => setActiveView('chat')}
             className="btn btn-secondary header-btn-responsive"
             style={{
-              background: activeView === 'chat' ? 'var(--brand-primary)' : 'var(--bg-input)',
-              color: activeView === 'chat' ? '#ffffff' : 'var(--brand-primary)',
-              border: '1px solid var(--border-color)',
+              background: activeView === 'chat' ? 'linear-gradient(135deg, #4f46e5, #06b6d4)' : '#ffffff',
+              color: activeView === 'chat' ? '#ffffff' : '#4f46e5',
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 11px',
-              borderRadius: '10px',
-              fontSize: '0.78rem',
+              padding: '6px 12px',
+              borderRadius: '12px',
+              fontSize: '0.8rem',
               fontWeight: 800,
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
             title="Ask PulseBot AI assistant"
           >
-            <Sparkles style={{ width: '14px', height: '14px', color: activeView === 'chat' ? '#ffffff' : 'var(--brand-primary)' }} />
+            <Sparkles style={{ width: '15px', height: '15px', color: activeView === 'chat' ? '#ffffff' : '#4f46e5' }} />
             <span className="header-label-tablet">PulseBot AI</span>
           </button>
 
@@ -442,15 +443,16 @@ export default function Header({ onOpenNotifications }) {
               onClick={() => setIsRegisterModalOpen(true)}
               className="btn btn-secondary header-btn-responsive"
               style={{
-                background: 'var(--bg-input)',
-                border: '1px solid var(--border-color)',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
                 color: 'var(--text-primary)',
-                padding: '6px 10px',
-                borderRadius: '10px'
+                padding: '6px 11px',
+                borderRadius: '12px'
               }}
               title="Register new team member or employee"
             >
-              <UserPlus style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
+              <UserPlus style={{ width: '15px', height: '15px', color: '#4f46e5' }} />
               <span className="header-label-tablet">Add User</span>
             </button>
           )}
@@ -461,9 +463,9 @@ export default function Header({ onOpenNotifications }) {
             className="btn btn-primary header-btn-responsive"
             style={{
               padding: '6px 14px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, var(--brand-primary) 0%, #0284c7 100%)',
-              boxShadow: '0 4px 12px var(--brand-glow)',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
+              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.28)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',

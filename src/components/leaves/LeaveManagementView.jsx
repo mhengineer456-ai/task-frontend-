@@ -59,7 +59,7 @@ export default function LeaveManagementView() {
   };
 
   return (
-    <div className="view-container" style={{ padding: '2rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="view-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Top Banner */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>

@@ -273,6 +273,114 @@ export default function TaskKanbanView() {
         </div>
       </div>
 
+      {/* 2.5 Executive KPI Metrics Strip */}
+      <div className="kpi-metrics-grid">
+        <div
+          className={`kpi-metric-card ${quickFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setQuickFilter('all')}
+          title="Click to view all tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Total Board Tasks
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px' }}>
+              {kanbanStats.total}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Across {columns.length} workflow stages
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5' }}>
+            <Layers style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+
+        <div
+          className={`kpi-metric-card ${quickFilter === 'my-tasks' ? 'active' : ''}`}
+          onClick={() => setQuickFilter(quickFilter === 'my-tasks' ? 'all' : 'my-tasks')}
+          title="Click to filter my assigned tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Assigned to Me
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0284c7', marginTop: '2px' }}>
+              {tasks.filter(t => t.assigneeId === activeUser?.id).length}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Personal workload queue
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7' }}>
+            <Zap style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+
+        <div
+          className={`kpi-metric-card ${quickFilter === 'urgent' ? 'active' : ''}`}
+          onClick={() => setQuickFilter(quickFilter === 'urgent' ? 'all' : 'urgent')}
+          title="Click to filter urgent & critical tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              High & Urgent
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#f97316', marginTop: '2px' }}>
+              {kanbanStats.urgent}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Top priority items
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(249, 115, 22, 0.1)', color: '#f97316' }}>
+            <Flame style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+
+        <div
+          className={`kpi-metric-card ${quickFilter === 'overdue' ? 'active' : ''}`}
+          onClick={() => setQuickFilter(quickFilter === 'overdue' ? 'all' : 'overdue')}
+          title="Click to filter overdue tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Overdue
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#ef4444', marginTop: '2px' }}>
+              {kanbanStats.overdue}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Exceeded target deadline
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+            <AlertTriangle style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+
+        <div
+          className="kpi-metric-card"
+          style={{ cursor: 'default' }}
+          title="Completed tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Completed
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#10b981', marginTop: '2px' }}>
+              {kanbanStats.completed}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Delivered successfully
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+            <CheckCircle2 style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+      </div>
+
       {/* 3. Quick Filter Pills Bar */}
       <div className="quick-filters-strip">
         <button

@@ -66,7 +66,7 @@ export default function EaPanelView() {
   };
 
   return (
-    <div className="view-container" style={{ padding: '2rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="view-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Page Title & Hero */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>

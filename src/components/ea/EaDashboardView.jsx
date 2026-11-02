@@ -142,78 +142,115 @@ export default function EaDashboardView() {
   };
 
   return (
-    <div className="view-container" style={{ padding: '2rem 2.5rem 5rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="view-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Dashboard Top Banner */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '6px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', padding: '3px 10px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              📋 Executive Assistant Operations
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)', color: '#ffffff', padding: '4px 12px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              📋 Executive Operations
             </span>
-            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700 }}>
-              🟢 Live MD Screen Monitoring Active
+            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+              Live MD Monitor Active
             </span>
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span>EA Operations & Follow-Up Command Center</span>
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+            EA Operations & Follow-Up Command Center
           </h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.35rem 0 0 0' }}>
             Maintain daily working lines, track deliverable status compliance, allot executive meetings, and enforce assignee follow-ups.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => {
               setEditingTask(null);
               setIsCreateModalOpen(true);
             }}
             className="btn btn-primary"
-            style={{ fontWeight: 800, background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)' }}
+            style={{ fontWeight: 800, borderRadius: '12px' }}
             title="Create and assign a new enterprise task or delegated deliverable"
           >
             <Plus style={{ width: '16px', height: '16px' }} />
             <span>+ Add Task / Deliverable</span>
           </button>
-          <button onClick={() => setIsDailyTaskModalOpen(true)} className="btn btn-secondary" style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', fontWeight: 800 }}>
+          <button onClick={() => setIsDailyTaskModalOpen(true)} className="btn btn-secondary" style={{ borderRadius: '12px', fontWeight: 700 }}>
             <Plus style={{ width: '16px', height: '16px' }} />
             <span>+ Add Working Line</span>
           </button>
-          <button onClick={() => setIsMeetingModalOpen(true)} className="btn btn-secondary" style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', fontWeight: 800 }}>
+          <button onClick={() => setIsMeetingModalOpen(true)} className="btn btn-secondary" style={{ borderRadius: '12px', fontWeight: 700 }}>
             <Calendar style={{ width: '16px', height: '16px' }} />
-            <span>Allot Executive Meeting</span>
+            <span>Allot Meeting</span>
           </button>
         </div>
       </div>
 
       {/* Stats Gauges Bar */}
       <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
-        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #0284c7' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--brand-light)', textTransform: 'uppercase' }}>Daily Routine Compliance</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38bdf8', margin: '0.25rem 0', fontFamily: 'monospace' }}>
-            {completedDailyCount} / {totalDailyCount} ({dailyCompliancePercentage}%)
+        {/* Daily Routine Compliance */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #4f46e5' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Daily Compliance</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '1px solid #c7d2fe', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckSquare style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Live MD Screen Monitor</div>
-        </div>
-
-        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #10b981' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase' }}>Allotted Executive Meetings</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34d399', margin: '0.25rem 0', fontFamily: 'monospace' }}>{meetings.length} Scheduled</div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Synced with MD Agenda</div>
-        </div>
-
-        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #f59e0b' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase' }}>Active Task Follow-ups</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fbbf24', margin: '0.25rem 0', fontFamily: 'monospace' }}>{followUps.length} Actions Logged</div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Active assignee pings</div>
-        </div>
-
-        <div className="glass-card" style={{ padding: '1rem', borderTop: '2px solid #f43f5e' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f43f5e', textTransform: 'uppercase' }}>Escalated to MD</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f87171', margin: '0.25rem 0', fontFamily: 'monospace' }}>
-            {escalatedCount} Blockers
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#4f46e5', letterSpacing: '-0.02em', display: 'block' }}>
+              {completedDailyCount} / {totalDailyCount} ({dailyCompliancePercentage}%)
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Live MD Screen Monitor</span>
           </div>
-          <div style={{ fontSize: '0.7rem', color: '#f43f5e', fontWeight: 700 }}>Requires MD Action</div>
+        </div>
+
+        {/* Allotted Meetings */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #10b981' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Executive Meetings</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', border: '1px solid #a7f3d0', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar style={{ width: '18px', height: '18px' }} />
+            </div>
+          </div>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#10b981', letterSpacing: '-0.02em', display: 'block' }}>
+              {meetings.length} Scheduled
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Synced with Agenda</span>
+          </div>
+        </div>
+
+        {/* Active Follow-ups */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #f59e0b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Task Follow-ups</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', border: '1px solid #fde68a', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock style={{ width: '18px', height: '18px' }} />
+            </div>
+          </div>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#d97706', letterSpacing: '-0.02em', display: 'block' }}>
+              {followUps.length} Actions Logged
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Active assignee pings</span>
+          </div>
+        </div>
+
+        {/* Escalated to MD */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #f43f5e' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Escalated to MD</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #fff1f2, #ffe4e6)', border: '1px solid #fecdd3', color: '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle style={{ width: '18px', height: '18px' }} />
+            </div>
+          </div>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#f43f5e', letterSpacing: '-0.02em', display: 'block' }}>
+              {escalatedCount} Blockers
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#f43f5e', fontWeight: 700 }}>Requires MD Action</span>
+          </div>
         </div>
       </div>
 

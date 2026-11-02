@@ -16,7 +16,10 @@ import {
   Target,
   History,
   ArrowRight,
-  MessageSquare
+  MessageSquare,
+  Calendar,
+  Layers,
+  Zap
 } from 'lucide-react';
 import QuickFollowupModal from '../tasks/QuickFollowupModal';
 
@@ -101,6 +104,93 @@ export default function MyTasksView() {
           <Sparkles style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
           <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Personal Velocity:</span>
           <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981' }}>{completedTasks.length} Completed</span>
+        </div>
+      </div>
+
+      {/* 1.5 Personal KPI Metric Cards Strip */}
+      <div className="kpi-metrics-grid">
+        <div
+          className={`kpi-metric-card ${activeTab === 'assigned' ? 'active' : ''}`}
+          onClick={() => setActiveTab('assigned')}
+          title="Click to view assigned tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Assigned To Me
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: '2px' }}>
+              {assignedToMe.length}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Active deliverable queue
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5' }}>
+            <Layers style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+
+        <div
+          className={`kpi-metric-card ${activeTab === 'today' ? 'active' : ''}`}
+          onClick={() => setActiveTab('today')}
+          title="Click to view tasks due today"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Due Today
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0284c7', marginTop: '2px' }}>
+              {todayTasks.length}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Target deadline today
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7' }}>
+            <Calendar style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+
+        <div
+          className={`kpi-metric-card ${activeTab === 'overdue' ? 'active' : ''}`}
+          onClick={() => setActiveTab('overdue')}
+          title="Click to view overdue tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Overdue
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#ef4444', marginTop: '2px' }}>
+              {overdueTasks.length}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Requires immediate action
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+            <AlertTriangle style={{ width: '22px', height: '22px' }} />
+          </div>
+        </div>
+
+        <div
+          className={`kpi-metric-card ${activeTab === 'completed' ? 'active' : ''}`}
+          onClick={() => setActiveTab('completed')}
+          title="Click to view completed tasks"
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Completed
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#10b981', marginTop: '2px' }}>
+              {completedTasks.length}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Delivered successfully
+            </div>
+          </div>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+            <CheckCircle2 style={{ width: '22px', height: '22px' }} />
+          </div>
         </div>
       </div>
 

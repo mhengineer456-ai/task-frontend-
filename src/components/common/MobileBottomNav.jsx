@@ -32,7 +32,9 @@ export default function MobileBottomNav() {
     activeUser,
     tasks,
     leaves,
+    isCreateModalOpen,
     setIsCreateModalOpen,
+    selectedTaskId,
     setViewingUserProfile,
     logout,
     deviceMode,
@@ -59,17 +61,21 @@ export default function MobileBottomNav() {
     setIsMoreSheetOpen(false);
   };
 
+  const isModalOrDrawerActive = isCreateModalOpen || !!selectedTaskId || isMoreSheetOpen;
+
   return (
     <>
-      {/* Floating Action Button for Rapid Task Creation */}
-      <button
-        onClick={() => setIsCreateModalOpen(true)}
-        className="mobile-fab"
-        title="Create New Task"
-        aria-label="Create New Task"
-      >
-        <Plus style={{ width: '24px', height: '24px', color: '#ffffff' }} />
-      </button>
+      {/* Floating Action Button for Rapid Task Creation (hidden when modal or drawer is open) */}
+      {!isModalOrDrawerActive && (
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="mobile-fab"
+          title="Create New Task"
+          aria-label="Create New Task"
+        >
+          <Plus style={{ width: '24px', height: '24px', color: '#ffffff' }} />
+        </button>
+      )}
 
       {/* Main Glassmorphic Bottom Navigation Bar */}
       <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">

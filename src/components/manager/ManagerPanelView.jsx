@@ -46,19 +46,21 @@ export default function ManagerPanelView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '4px' }}>
-            <span className="badge badge-brand" style={{ background: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd' }}>
-              👔 Manager Panel • Team Level Scope
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#e0f2fe', color: '#0284c7', padding: '3px 10px', borderRadius: '99px', border: '1px solid #bae6fd' }}>
+              👔 Manager Panel • Team Scope
             </span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeUser.name} ({activeUser.department} Manager)</span>
           </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Team Ops & Direct Reports Dashboard</h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+            Team Operations & Direct Reports Dashboard
+          </h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             Manage direct report assignments, evaluate quarterly team KPIs/KRAs, and sign off completed tasks.
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary">
+          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary" style={{ borderRadius: '12px', fontWeight: 800 }}>
             <Plus style={{ width: '16px', height: '16px' }} /> Delegate Task to Team
           </button>
         </div>
@@ -66,48 +68,80 @@ export default function ManagerPanelView() {
 
       {/* Manager Summary Stats */}
       <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>My Direct Reports</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--brand-primary)', fontFamily: 'monospace' }}>
-            {directReports.length} Members
+        {/* Direct Reports */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #4f46e5' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Direct Reports</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '1px solid #c7d2fe', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Users style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{activeUser.department} Team</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#4f46e5', letterSpacing: '-0.02em', display: 'block' }}>
+              {directReports.length} Members
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{activeUser.department} Team</span>
+          </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Pending Approvals</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-warning)', fontFamily: 'monospace' }}>
-            {pendingTeamApprovals.length} Tasks
+        {/* Pending Approvals */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #f59e0b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Pending Approvals</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', border: '1px solid #fde68a', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sign-off Required</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#d97706', letterSpacing: '-0.02em', display: 'block' }}>
+              {pendingTeamApprovals.length} Tasks
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#d97706', fontWeight: 600 }}>Sign-off Required</span>
+          </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Team Active Tasks</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-info)', fontFamily: 'monospace' }}>
-            {teamTasks.filter(t => t.status !== 'Completed' && t.status !== 'Approved').length} Active
+        {/* Team Active Tasks */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #0284c7' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Team Active</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)', border: '1px solid #bae6fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Briefcase style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Under Execution</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0284c7', letterSpacing: '-0.02em', display: 'block' }}>
+              {teamTasks.filter(t => t.status !== 'Completed' && t.status !== 'Approved').length} Active
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Under Execution</span>
+          </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Avg Team KPI</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-success)', fontFamily: 'monospace' }}>
-            94.8%
+        {/* Avg Team KPI */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #10b981' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Avg Team KPI</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', border: '1px solid #a7f3d0', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Award style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Q3 Target Exceeded</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#10b981', letterSpacing: '-0.02em', display: 'block' }}>
+              94.8%
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>Q3 Target Exceeded</span>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="mobile-task-tabs-strip" style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-        <button onClick={() => { setActiveTab('directReports'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'directReports' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.45rem 0.85rem' }}>
+        <button onClick={() => { setActiveTab('directReports'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'directReports' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.5rem 1rem', borderRadius: '99px' }}>
           <Users style={{ width: '14px', height: '14px' }} /> Direct Reports ({directReports.length})
         </button>
-        <button onClick={() => { setActiveTab('approvals'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'approvals' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.45rem 0.85rem' }}>
+        <button onClick={() => { setActiveTab('approvals'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'approvals' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.5rem 1rem', borderRadius: '99px' }}>
           <CheckSquare style={{ width: '14px', height: '14px' }} /> Approvals Queue ({pendingTeamApprovals.length})
         </button>
-        <button onClick={() => { setActiveTab('workload'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'workload' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.45rem 0.85rem' }}>
+        <button onClick={() => { setActiveTab('workload'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'workload' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.5rem 1rem', borderRadius: '99px' }}>
           <Briefcase style={{ width: '14px', height: '14px' }} /> Team Task Delegation
         </button>
       </div>

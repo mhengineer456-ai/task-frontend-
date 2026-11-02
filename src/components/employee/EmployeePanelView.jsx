@@ -38,56 +38,94 @@ export default function EmployeePanelView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '4px' }}>
-            <span className="badge badge-brand" style={{ background: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd' }}>
-              👤 Individual Employee Panel
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#e0f2fe', color: '#0284c7', padding: '3px 10px', borderRadius: '99px', border: '1px solid #bae6fd' }}>
+              👤 Personal Workstation
             </span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeUser.name} ({activeUser.role})</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeUser.name} ({activeUser.role} • {activeUser.department})</span>
           </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>My Personal Workstation</h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+            Hello, {activeUser.name}! Let's crush today's goals 🎯
+          </h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             Track assigned tasks, log execution time, check subtask items, and monitor personal KPIs.
           </p>
         </div>
 
-        <div className="glass-panel" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Sparkles style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Personal Velocity: </span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-success)' }}>{completed.length} Completed</span>
+        <div className="glass-panel" style={{ padding: '0.6rem 1.15rem', display: 'flex', alignItems: 'center', gap: '0.65rem', borderRadius: '14px', background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Sparkles style={{ width: '16px', height: '16px' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Personal Velocity</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981' }}>{completed.length} Completed</div>
+          </div>
         </div>
       </div>
 
       {/* Employee Top Metric Bar */}
       <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Due Today</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#60a5fa', fontFamily: 'monospace' }}>
-            {dueToday.length} Tasks
+        {/* Due Today */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #0284c7' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Due Today</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)', border: '1px solid #bae6fd', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Requires focus</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0284c7', letterSpacing: '-0.02em', display: 'block' }}>
+              {dueToday.length} Tasks
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Requires focus</span>
+          </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Overdue</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-danger)', fontFamily: 'monospace' }}>
-            {overdue.length} Tasks
+        {/* Overdue */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #f43f5e' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Overdue</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #fff1f2, #ffe4e6)', border: '1px solid #fecdd3', color: '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Requires action</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#f43f5e', letterSpacing: '-0.02em', display: 'block' }}>
+              {overdue.length} Tasks
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#f43f5e', fontWeight: 600 }}>Requires action</span>
+          </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>My On-Time Rate</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-success)', fontFamily: 'monospace' }}>
-            {kpi.onTimeRate}%
+        {/* My On-Time Rate */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #10b981' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>On-Time Rate</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', border: '1px solid #a7f3d0', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>KPI Target: &gt;90%</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#10b981', letterSpacing: '-0.02em', display: 'block' }}>
+              {kpi.onTimeRate}%
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>Target: &gt;90%</span>
+          </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>Manager Rating</span>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--brand-primary)', fontFamily: 'monospace' }}>
-            {review.rating} / 5.0
+        {/* Manager Rating */}
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #4f46e5' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Manager Rating</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '1px solid #c7d2fe', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Award style={{ width: '18px', height: '18px' }} />
+            </div>
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{review.evaluationPeriod} Evaluation</span>
+          <div style={{ marginTop: '0.75rem' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#4f46e5', letterSpacing: '-0.02em', display: 'block' }}>
+              {review.rating} / 5.0
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{review.evaluationPeriod} Score</span>
+          </div>
         </div>
       </div>
 
