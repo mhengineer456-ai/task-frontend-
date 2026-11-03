@@ -230,18 +230,20 @@ export default function Header({ onOpenNotifications }) {
                 )}
               </button>
 
-              {/* Dark/Light Mode */}
+              {/* 3-Way Mode (Light / Dark / System) */}
               <button
                 type="button"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => setTheme(theme === 'light' ? 'dark' : (theme === 'dark' ? 'system' : 'light'))}
                 className="btn-icon"
                 style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
-                title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+                title={`Current Theme: ${theme.toUpperCase()} (Click to toggle Light / Dark / System)`}
               >
                 {theme === 'dark' ? (
-                  <Sun style={{ width: '15px', height: '15px', color: '#f59e0b' }} />
+                  <Moon style={{ width: '15px', height: '15px', color: '#0A84FF' }} />
+                ) : theme === 'light' ? (
+                  <Sun style={{ width: '15px', height: '15px', color: '#FF9500' }} />
                 ) : (
-                  <Moon style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
+                  <Monitor style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
                 )}
               </button>
 
@@ -592,9 +594,9 @@ export default function Header({ onOpenNotifications }) {
             )}
           </button>
 
-          {/* Dark/Light Mode Toggle */}
+          {/* 3-Way Mode Toggle (Light -> Dark -> System) */}
           <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={() => setTheme(theme === 'light' ? 'dark' : (theme === 'dark' ? 'system' : 'light'))}
             className="btn-icon"
             style={{
               background: 'var(--bg-input)',
@@ -602,12 +604,14 @@ export default function Header({ onOpenNotifications }) {
               padding: '7px',
               borderRadius: '10px'
             }}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+            title={`Current Theme: ${theme.toUpperCase()} (Click to toggle Light / Dark / System)`}
           >
             {theme === 'dark' ? (
-              <Sun style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+              <Moon style={{ width: '18px', height: '18px', color: '#0A84FF' }} />
+            ) : theme === 'light' ? (
+              <Sun style={{ width: '18px', height: '18px', color: '#FF9500' }} />
             ) : (
-              <Moon style={{ width: '18px', height: '18px', color: 'var(--brand-primary)' }} />
+              <Monitor style={{ width: '18px', height: '18px', color: 'var(--brand-primary)' }} />
             )}
           </button>
         </div>

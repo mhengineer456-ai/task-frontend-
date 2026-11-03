@@ -38,7 +38,11 @@ import {
   Loader2,
   AtSign,
   Zap,
-  ArrowLeft
+  ArrowLeft,
+  Copy,
+  Check,
+  PhoneCall,
+  RefreshCw
 } from 'lucide-react';
 import AudioPlayerBubble from './AudioPlayerBubble';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
@@ -638,6 +642,95 @@ const formatInlineTokens = (line, isSelf, onImageClick = null, suppressImages = 
   return withBold;
 };
 
+// AI Assistant Suggested Prompts (Apple Intelligence Experience)
+const AI_SUGGESTED_PROMPTS = [
+  {
+    icon: '📅',
+    title: 'Help me organize my day.',
+    desc: 'Review pending tasks, high-priority deadlines, and schedule.',
+    prompt: 'Help me organize my day: what are my high priority tasks and upcoming deadlines?'
+  },
+  {
+    icon: '✍️',
+    title: 'Write something for me.',
+    desc: 'Draft executive updates, client replies, or project notes.',
+    prompt: 'Help me draft a clear, professional update to leadership about our production progress.'
+  },
+  {
+    icon: '🧠',
+    title: 'Explain something complex.',
+    desc: 'Break down lot tracking, cutting workflows, or SLA rules.',
+    prompt: 'Explain the complete lifecycle of our production lot orders from cutting to packaging.'
+  },
+  {
+    icon: '💡',
+    title: 'Help me brainstorm ideas.',
+    desc: 'Generate strategies to reduce bottlenecks and boost velocity.',
+    prompt: 'Help me brainstorm practical strategies to optimize supervisor turnaround times and resolve overdue tasks.'
+  }
+];
+
+// macOS-style code block with traffic lights and copy button
+const AppleCodeBlock = ({ code, language = 'text' }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="apple-code-container">
+      <div className="apple-code-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="apple-traffic-lights">
+            <span className="apple-traffic-dot" style={{ background: '#FF5F56' }} />
+            <span className="apple-traffic-dot" style={{ background: '#FFBD2E' }} />
+            <span className="apple-traffic-dot" style={{ background: '#27C93F' }} />
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'lowercase', color: '#A1A1AA' }}>
+            {language}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleCopy}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: copied ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+            border: 'none',
+            color: copied ? '#34C759' : '#FAFAFA',
+            padding: '3px 8px',
+            borderRadius: '6px',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          title="Copy code to clipboard"
+        >
+          {copied ? <Check style={{ width: '12px', height: '12px' }} /> : <Copy style={{ width: '12px', height: '12px' }} />}
+          <span>{copied ? 'Copied' : 'Copy Code'}</span>
+        </button>
+      </div>
+      <pre style={{
+        margin: 0,
+        padding: '12px 14px',
+        overflowX: 'auto',
+        fontSize: '12px',
+        lineHeight: '1.5',
+        color: '#E4E4E7',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+      }}>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+};
+
 // Formatter to render clean markdown with styled HTML tables, bold, clickable links, headers, and bar graphs
 const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages = false) => {
   if (!text) return null;
@@ -658,6 +751,22 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
 
   while (i < lines.length) {
     const line = lines[i];
+
+    // Detect Fenced Code Blocks: ```language ... ```
+    if (line.trim().startsWith('```')) {
+      const lang = line.trim().slice(3).trim() || 'code';
+      i++;
+      const codeLines = [];
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing ```
+      elements.push(
+        <AppleCodeBlock key={`code-block-${elements.length}-${i}`} code={codeLines.join('\n')} language={lang} />
+      );
+      continue;
+    }
 
     // Detect Markdown Table: Starts with | and followed by separator |---|---|
     if (isTableLine(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
@@ -1010,14 +1119,17 @@ export default function ChatView() {
   const [selectedFile, setSelectedFile] = useState(null); // { dataUrl, name, size, type }
   const [previewImage, setPreviewImage] = useState(null); // Lightbox dataUrl
   const [filterQuery, setFilterQuery] = useState('');
-  const [sidebarTab, setSidebarTab] = useState('all'); // 'all' | 'team' | 'channels'
+  const [sidebarTab, setSidebarTab] = useState('all'); // 'ai' | 'all' | 'personal' | 'groups'
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [hoveredMsgId, setHoveredMsgId] = useState(null);
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
   const [isAiInfoOpen, setIsAiInfoOpen] = useState(false);
   const [isLinkedSheetsOpen, setIsLinkedSheetsOpen] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [callNotification, setCallNotification] = useState(null);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [taggedUser, setTaggedUser] = useState(null);
@@ -1025,6 +1137,21 @@ export default function ChatView() {
   const [tagSearch, setTagSearch] = useState('');
   const [requireEaFollowup, setRequireEaFollowup] = useState(false);
   const [mobileActivePane, setMobileActivePane] = useState('roster');
+
+  const handleStartCall = (type, targetName) => {
+    setCallNotification({
+      type,
+      name: targetName || 'Team Member'
+    });
+    setTimeout(() => setCallNotification(null), 3500);
+  };
+
+  const handleCopyMessage = (msgId, text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(msgId);
+    setTimeout(() => setCopiedMsgId(null), 2000);
+  };
 
   const messagesContainerRef = useRef(null);
   const isAutoScrollEnabled = useRef(true);
@@ -1240,6 +1367,34 @@ export default function ChatView() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Listen for mobile back gestures to step back cleanly within ChatView
+  useEffect(() => {
+    const handleMobileBack = (e) => {
+      if (previewImage) {
+        e.preventDefault();
+        setPreviewImage(null);
+      } else if (isGroupInfoOpen) {
+        e.preventDefault();
+        setIsGroupInfoOpen(false);
+      } else if (isAiInfoOpen) {
+        e.preventDefault();
+        setIsAiInfoOpen(false);
+      } else if (isLinkedSheetsOpen) {
+        e.preventDefault();
+        setIsLinkedSheetsOpen(false);
+      } else if (isCreateGroupOpen) {
+        e.preventDefault();
+        setIsCreateGroupOpen(false);
+      } else if (mobileActivePane === 'chat') {
+        e.preventDefault();
+        setMobileActivePane('roster');
+      }
+    };
+
+    window.addEventListener('app:mobileback', handleMobileBack);
+    return () => window.removeEventListener('app:mobileback', handleMobileBack);
+  }, [mobileActivePane, previewImage, isGroupInfoOpen, isAiInfoOpen, isLinkedSheetsOpen, isCreateGroupOpen]);
+
   const handleInputChange = (e) => {
     const val = e.target.value;
     setMessageInput(val);
@@ -1404,8 +1559,6 @@ export default function ChatView() {
       <div
         className="chat-main-container"
         style={{
-          display: 'flex',
-          flexDirection: 'column',
           height: '100%',
           width: '100%',
           minHeight: 0,
@@ -1413,26 +1566,20 @@ export default function ChatView() {
           overflow: 'hidden'
         }}
       >
-        {/* Sidebar Channels & Team Members Roster */}
+        {/* Apple Left Sidebar: Channels & Team Members Roster */}
         <div
-          className={`glass-panel chat-roster-pane ${mobileActivePane === 'chat' ? 'chat-pane-hidden-mobile' : ''}`}
-          style={{
-            height: '100%',
-            minHeight: 0,
-            borderRadius: 'var(--radius-lg) 0 0 var(--radius-lg)',
-            borderRight: '1px solid var(--border-color)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            padding: 0
-          }}
+          className={`chat-roster-pane ${mobileActivePane === 'chat' ? 'chat-pane-hidden-mobile' : ''}`}
         >
         {/* Header & Search */}
-        <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-sidebar)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <MessageSquare style={{ width: '20px', height: '20px', color: '#0284c7' }} />
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>TaskPulse Messenger</h3>
+        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-sidebar)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'var(--brand-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MessageSquare style={{ width: '15px', height: '15px' }} />
+              </div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+                Messages
+              </h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
@@ -1442,9 +1589,9 @@ export default function ChatView() {
                   fontSize: '0.72rem',
                   padding: '3px 8px',
                   borderRadius: '8px',
-                  background: '#e0f2fe',
-                  color: '#0369a1',
-                  border: '1px solid #bae6fd',
+                  background: 'var(--bg-input)',
+                  color: 'var(--brand-primary)',
+                  border: '1px solid var(--border-color)',
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'flex',
@@ -1454,105 +1601,145 @@ export default function ChatView() {
                 }}
                 title="Create a new team group"
               >
-                <Users style={{ width: '13px', height: '13px' }} />
+                <Users style={{ width: '12px', height: '12px' }} />
                 <span>+ Group</span>
               </button>
-              <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: '12px', background: '#dcfce7', color: '#16a34a', fontWeight: 800 }}>
-                Live ⚡
+              <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', background: 'var(--color-success-bg)', color: 'var(--color-success)', fontWeight: 800 }}>
+                Live
               </span>
             </div>
           </div>
 
-          <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
-            <Search style={{ position: 'absolute', left: '10px', top: '12px', width: '14px', height: '14px', color: 'var(--text-muted)' }} />
+          <div style={{ position: 'relative', marginBottom: '0.65rem' }}>
+            <Search style={{ position: 'absolute', left: '10px', top: '10px', width: '14px', height: '14px', color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Search chats, team, or channels..."
+              placeholder="Search conversations, team, or AI..."
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
               className="search-input"
-              style={{ paddingLeft: '2.1rem', fontSize: '0.8125rem' }}
+              style={{
+                paddingLeft: '2rem',
+                fontSize: '0.8rem',
+                borderRadius: '10px',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-color)'
+              }}
             />
           </div>
 
-          {/* Section Filter Pills */}
-          <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-card)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          {/* Apple Segmented Control: 🤖 AI | All | Personal | Groups */}
+          <div className="apple-segmented-tabs">
             <button
-              onClick={() => setSidebarTab('all')}
-              style={{
-                flex: 1,
-                padding: '4px 6px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                background: sidebarTab === 'all' ? '#0284c7' : 'transparent',
-                color: sidebarTab === 'all' ? '#ffffff' : 'var(--text-secondary)',
-                cursor: 'pointer'
+              type="button"
+              onClick={() => {
+                setSidebarTab('ai');
+                const aiChan = chatChannels.find(c => c.type === 'ai' || c.id === 'chan-ai');
+                if (aiChan) setActiveChannelId(aiChan.id);
+                setMobileActivePane('chat');
               }}
+              className={`apple-segmented-tab ${sidebarTab === 'ai' || (sidebarTab !== 'personal' && sidebarTab !== 'groups' && activeChannel.type === 'ai') ? 'active' : ''}`}
+              title="Open AI Assistant"
+            >
+              🤖 AI
+            </button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab('all')}
+              className={`apple-segmented-tab ${sidebarTab === 'all' && activeChannel.type !== 'ai' ? 'active' : ''}`}
             >
               All
             </button>
             <button
-              onClick={() => setSidebarTab('team')}
-              style={{
-                flex: 1,
-                padding: '4px 6px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                background: sidebarTab === 'team' ? '#0284c7' : 'transparent',
-                color: sidebarTab === 'team' ? '#ffffff' : 'var(--text-secondary)',
-                cursor: 'pointer'
-              }}
+              type="button"
+              onClick={() => setSidebarTab('personal')}
+              className={`apple-segmented-tab ${sidebarTab === 'personal' ? 'active' : ''}`}
             >
-              Team ({filteredTeamMembers.length})
+              Personal ({filteredTeamMembers.length})
             </button>
             <button
-              onClick={() => setSidebarTab('channels')}
-              style={{
-                flex: 1,
-                padding: '4px 6px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                background: sidebarTab === 'channels' ? '#0284c7' : 'transparent',
-                color: sidebarTab === 'channels' ? '#ffffff' : 'var(--text-secondary)',
-                cursor: 'pointer'
-              }}
+              type="button"
+              onClick={() => setSidebarTab('groups')}
+              className={`apple-segmented-tab ${sidebarTab === 'groups' ? 'active' : ''}`}
             >
-              Channels
+              Groups ({filteredChannels.filter(c => c.type === 'group' || c.type === 'public').length})
             </button>
           </div>
         </div>
 
-        {/* Channels & Team Member List */}
+        {/* Conversations & Team Member List */}
         <div
           style={{
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
             overscrollBehavior: 'contain',
-            padding: '0.65rem',
+            padding: '0.5rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.85rem'
+            gap: '0.65rem'
           }}
         >
+          {/* Pinned AI Assistant Card (Visible in 'all' or 'ai') */}
+          {(sidebarTab === 'all' || sidebarTab === 'ai') && (() => {
+            const aiChannel = chatChannels.find(c => c.type === 'ai' || c.id === 'chan-ai') || { id: 'chan-ai', name: 'PulseBot AI' };
+            const isAiActive = activeChannelId === aiChannel.id;
+            return (
+              <div style={{ marginBottom: '0.2rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveChannelId(aiChannel.id);
+                    setMobileActivePane('chat');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '12px',
+                    border: isAiActive ? '1.5px solid var(--brand-primary)' : '1px solid var(--border-color)',
+                    background: isAiActive ? 'var(--bg-hover)' : 'var(--bg-card)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    boxShadow: isAiActive ? '0 2px 8px var(--brand-glow)' : 'var(--shadow-sm)',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                >
+                  <div className="ai-siri-orb" style={{ width: '38px', height: '38px', minWidth: '38px', margin: 0 }}>
+                    <Sparkles style={{ width: '18px', height: '18px' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                        PulseBot AI
+                      </h4>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 6px', borderRadius: '6px', background: 'var(--brand-glow)', color: 'var(--brand-primary)' }}>
+                        AI Intelligence
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      Your personal intelligence, always ready
+                    </p>
+                  </div>
+                </button>
+              </div>
+            );
+          })()}
+
           {/* Section 1: Team Members (1-on-1 Direct Chat) */}
-          {(sidebarTab === 'all' || sidebarTab === 'team') && (
+          {(sidebarTab === 'all' || sidebarTab === 'personal') && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.4rem', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: '#0284c7', letterSpacing: '0.5px' }}>
-                <span>Team Members (Direct Chat)</span>
-                <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 700 }}>🟢 Online</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.4rem 0.3rem', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+                <span>Personal Conversations</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--color-success)', fontWeight: 700 }}>🟢 Online</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {filteredTeamMembers.length === 0 ? (
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0.5rem', textAlign: 'center' }}>
-                    No other team members found.
+                    No personal conversations found.
                   </div>
                 ) : (
                   filteredTeamMembers.map(member => {
@@ -1567,29 +1754,29 @@ export default function ChatView() {
                           startDirectChat(member);
                           setMobileActivePane('chat');
                         }}
-                        className={`glass-card ${isActive ? 'glass-card-hover' : ''}`}
                         style={{
-                          padding: '0.65rem 0.85rem',
+                          padding: '0.6rem 0.8rem',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.75rem',
                           textAlign: 'left',
-                          background: isActive ? '#e0f2fe' : 'var(--bg-card)',
-                          borderColor: isActive ? '#0284c7' : 'var(--border-color)',
+                          background: isActive ? 'var(--bg-hover)' : 'var(--bg-card)',
+                          border: isActive ? '1.5px solid var(--brand-primary)' : '1px solid var(--border-color)',
                           cursor: 'pointer',
-                          borderRadius: 'var(--radius-md)',
+                          borderRadius: '12px',
+                          boxShadow: isActive ? '0 2px 8px var(--brand-glow)' : 'var(--shadow-sm)',
                           transition: 'all 0.15s ease'
                         }}
                       >
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                           {member.avatar ? (
-                            <img src={member.avatar} alt={member.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #bae6fd' }} />
+                            <img src={member.avatar} alt={member.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border-color)' }} />
                           ) : (
-                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#bae6fd', color: '#0284c7', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-input)', color: 'var(--brand-primary)', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {member.name.slice(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <span style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', border: '2px solid #ffffff' }} />
+                          <span style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '9px', height: '9px', borderRadius: '50%', background: 'var(--color-success)', border: '2px solid var(--bg-card)' }} />
                         </div>
 
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1606,8 +1793,8 @@ export default function ChatView() {
                                 fontSize: '0.65rem',
                                 padding: '1px 6px',
                                 borderRadius: '6px',
-                                background: 'rgba(2, 132, 199, 0.12)',
-                                color: '#0284c7',
+                                background: 'var(--bg-input)',
+                                color: 'var(--text-secondary)',
                                 fontWeight: 700,
                                 cursor: 'pointer'
                               }}
@@ -1616,7 +1803,7 @@ export default function ChatView() {
                               Profile
                             </span>
                           </div>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>
                             {member.role} • {member.department || 'Team'}
                           </p>
                         </div>
@@ -1628,11 +1815,11 @@ export default function ChatView() {
             </div>
           )}
 
-          {/* Section 2: Channels & AI */}
-          {(sidebarTab === 'all' || sidebarTab === 'channels') && (
+          {/* Section 2: Channels & Groups */}
+          {(sidebarTab === 'all' || sidebarTab === 'groups') && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.4rem' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: '#0284c7', letterSpacing: '0.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.4rem 0.3rem' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
                   Channels & Groups
                 </span>
                 <button
@@ -1641,7 +1828,7 @@ export default function ChatView() {
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#0284c7',
+                    color: 'var(--brand-primary)',
                     fontSize: '0.68rem',
                     fontWeight: 800,
                     cursor: 'pointer',
@@ -1656,8 +1843,8 @@ export default function ChatView() {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                {filteredChannels.filter(c => c.type !== 'direct').map(channel => {
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {filteredChannels.filter(c => c.type !== 'direct' && c.type !== 'ai' && c.id !== 'chan-ai').map(channel => {
                   const isActive = channel.id === activeChannelId;
                   return (
                     <button
@@ -1666,32 +1853,28 @@ export default function ChatView() {
                         setActiveChannelId(channel.id);
                         setMobileActivePane('chat');
                       }}
-                      className={`glass-card ${isActive ? 'glass-card-hover' : ''}`}
                       style={{
-                        padding: '0.75rem 0.85rem',
+                        padding: '0.65rem 0.8rem',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.75rem',
                         textAlign: 'left',
-                        background: isActive ? '#e0f2fe' : 'var(--bg-card)',
-                        borderColor: isActive ? 'var(--brand-primary)' : 'var(--border-color)',
+                        background: isActive ? 'var(--bg-hover)' : 'var(--bg-card)',
+                        border: isActive ? '1.5px solid var(--brand-primary)' : '1px solid var(--border-color)',
                         cursor: 'pointer',
-                        borderRadius: 'var(--radius-md)',
+                        borderRadius: '12px',
+                        boxShadow: isActive ? '0 2px 8px var(--brand-glow)' : 'var(--shadow-sm)',
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      {channel.type === 'ai' ? (
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #8b5cf6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: '#fff', flexShrink: 0 }}>
-                          🤖
-                        </div>
-                      ) : channel.type === 'group' ? (
-                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                      {channel.type === 'group' ? (
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--color-success-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-success)', flexShrink: 0 }}>
                           <Users style={{ width: '18px', height: '18px' }} />
                         </div>
                       ) : channel.avatar ? (
-                        <img src={channel.avatar} alt={channel.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--brand-primary)', flexShrink: 0 }} />
+                        <img src={channel.avatar} alt={channel.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border-color)', flexShrink: 0 }} />
                       ) : (
-                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', flexShrink: 0 }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
                           <Hash style={{ width: '18px', height: '18px' }} />
                         </div>
                       )}
@@ -1702,7 +1885,7 @@ export default function ChatView() {
                             {channel.name}
                           </h4>
                         </div>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>
                           {channel.roleBadge || channel.description}
                         </p>
                       </div>
@@ -1734,10 +1917,10 @@ export default function ChatView() {
           background: 'var(--bg-main)'
         }}
       >
-        {/* WhatsApp-Style Active Chat Header */}
+        {/* Apple-Style Active Chat Header */}
         <div
           style={{
-            padding: '0.65rem 0.85rem',
+            padding: '0.6rem 1rem',
             borderBottom: '1px solid var(--border-color)',
             background: 'var(--bg-sidebar)',
             display: 'flex',
@@ -1748,11 +1931,11 @@ export default function ChatView() {
             flexWrap: 'nowrap',
             width: '100%',
             boxSizing: 'border-box',
-            height: '58px'
+            height: '62px'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1, overflow: 'hidden' }}>
-            {/* Mobile Back Button: return to roster or dashboard */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: 1, overflow: 'hidden' }}>
+            {/* Mobile Back Button: return to roster */}
             <button
               type="button"
               onClick={() => {
@@ -1763,13 +1946,13 @@ export default function ChatView() {
                 }
               }}
               className="chat-mobile-back-btn"
-              title="Back"
+              title="Back to Conversations"
               aria-label="Back"
             >
               <ArrowLeft style={{ width: '18px', height: '18px' }} />
             </button>
 
-            {/* Clickable Contact Profile Area (WhatsApp Style) */}
+            {/* Clickable Contact Profile Area */}
             <div
               onClick={handleHeaderClick}
               onMouseEnter={() => setIsHeaderHovered(true)}
@@ -1779,31 +1962,25 @@ export default function ChatView() {
                 alignItems: 'center',
                 gap: '0.65rem',
                 cursor: 'pointer',
-                padding: '0.3rem 0.5rem',
+                padding: '0.25rem 0.4rem',
                 borderRadius: '10px',
-                background: isHeaderHovered ? 'rgba(2, 132, 199, 0.08)' : 'transparent',
+                background: isHeaderHovered ? 'var(--bg-hover)' : 'transparent',
                 transition: 'all 0.15s ease',
                 userSelect: 'none',
                 minWidth: 0,
                 flex: 1,
                 overflow: 'hidden'
               }}
-              title={
-                isDirectChat
-                  ? `Click to view ${chatDisplayName}'s profile`
-                  : activeChannel.type === 'group' || activeChannel.type === 'public'
-                  ? `Click to view ${chatDisplayName} group info & members`
-                  : 'Click to view PulseBot AI details'
-              }
+              title="Click to view details"
             >
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 {activeChannel.type === 'ai' ? (
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #8b5cf6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', color: '#fff', boxShadow: '0 2px 8px rgba(2,132,199,0.25)' }}>
-                    🤖
+                  <div className="ai-siri-orb" style={{ width: '38px', height: '38px', minWidth: '38px', margin: 0, boxShadow: '0 2px 10px var(--brand-glow)' }}>
+                    <Sparkles style={{ width: '18px', height: '18px' }} />
                   </div>
                 ) : activeChannel.type === 'group' ? (
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>
-                    <Users style={{ width: '20px', height: '20px' }} />
+                  <div style={{ width: '38px', height: '38px', borderRadius: '11px', background: 'var(--color-success-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-success)' }}>
+                    <Users style={{ width: '18px', height: '18px' }} />
                   </div>
                 ) : chatDisplayAvatar ? (
                   <img
@@ -1811,161 +1988,175 @@ export default function ChatView() {
                     alt={chatDisplayName}
                     onError={(e) => {
                       e.currentTarget.onerror = null;
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(chatDisplayName)}&background=0284c7&color=fff&size=100`;
+                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(chatDisplayName)}&background=007AFF&color=fff&size=100`;
                     }}
-                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #bae6fd', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}
+                    style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border-color)' }}
                   />
                 ) : (
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', fontWeight: 800, fontSize: '0.95rem', border: '2px solid #bae6fd', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
-                    {isDirectChat ? (chatDisplayName ? chatDisplayName.slice(0, 2).toUpperCase() : 'DM') : <Hash style={{ width: '20px', height: '20px' }} />}
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-primary)', fontWeight: 800, fontSize: '0.9rem', border: '1.5px solid var(--border-color)' }}>
+                    {isDirectChat ? (chatDisplayName ? chatDisplayName.slice(0, 2).toUpperCase() : 'DM') : <Hash style={{ width: '18px', height: '18px' }} />}
                   </div>
                 )}
                 {isDirectChat && (
-                  <span style={{ position: 'absolute', bottom: '0px', right: '0px', width: '11px', height: '11px', borderRadius: '50%', background: '#10b981', border: '2px solid #ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                  <span style={{ position: 'absolute', bottom: '0px', right: '0px', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-success)', border: '2px solid var(--bg-card)' }} />
                 )}
               </div>
 
               <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, overflow: 'hidden' }}>
-                  <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {chatDisplayName}
                   </h3>
                   {isDirectChat && (
-                    <span className="header-label-tablet" style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: '10px', background: '#dcfce7', color: '#16a34a', fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <span className="header-label-tablet" style={{ fontSize: '0.62rem', padding: '1px 6px', borderRadius: '8px', background: 'var(--bg-input)', color: 'var(--text-secondary)', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
                       Direct
                     </span>
                   )}
                   {(activeChannel.type === 'group' || activeChannel.type === 'public') && (
-                    <span className="header-label-tablet" style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: '10px', background: '#d1fae5', color: '#059669', fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <span className="header-label-tablet" style={{ fontSize: '0.62rem', padding: '1px 6px', borderRadius: '8px', background: 'var(--color-success-bg)', color: 'var(--color-success)', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
                       Group
                     </span>
                   )}
-                  <Info
-                    style={{
-                      width: '13px',
-                      height: '13px',
-                      color: '#0284c7',
-                      opacity: isHeaderHovered ? 1 : 0.45,
-                      transition: 'opacity 0.15s ease',
-                      flexShrink: 0
-                    }}
-                    title="Click to view contact profile details"
-                  />
                 </div>
-                <p style={{ fontSize: '0.72rem', color: currentTypers.length > 0 ? '#0284c7' : 'var(--text-muted)', fontWeight: currentTypers.length > 0 ? 700 : 500, margin: '1px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ fontSize: '0.72rem', color: currentTypers.length > 0 ? 'var(--brand-primary)' : 'var(--text-secondary)', fontWeight: currentTypers.length > 0 ? 700 : 500, margin: '1px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {currentTypers.length > 0
                     ? `${currentTypers.join(', ')} is typing...`
-                    : (isDirectChat ? `${chatDisplayRole} • online` : (activeChannel.type === 'group' || activeChannel.type === 'public') ? (activeChannel.description || `${activeChannel.participantIds?.length || 0} members`) : (activeChannel.roleBadge || activeChannel.description || 'Active Channel'))}
+                    : (isDirectChat ? `${chatDisplayRole} • Active Online` : (activeChannel.type === 'group' || activeChannel.type === 'public') ? (activeChannel.description || `${activeChannel.participantIds?.length || 0} participants`) : 'Always ready to help • Personal Intelligence')}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Action Tools: Explicit Profile/Group Info Button & Persona Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0, flexWrap: 'nowrap' }}>
-            {isDirectChat ? (
-              <button
-                type="button"
-                onClick={handleHeaderClick}
-                className="btn btn-secondary chat-action-btn"
-                style={{
-                  padding: '0.35rem 0.65rem',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: '#f0f9ff',
-                  borderColor: '#bae6fd',
-                  color: '#0284c7'
-                }}
-                title={`Open ${chatDisplayName}'s full profile, tasks, and KPIs`}
-              >
-                <User style={{ width: '13px', height: '13px' }} />
-                <span className="header-label-tablet">Profile</span>
-              </button>
-            ) : (activeChannel.type === 'group' || activeChannel.type === 'public') ? (
-              <button
-                type="button"
-                onClick={handleHeaderClick}
-                className="btn btn-secondary chat-action-btn"
-                style={{
-                  padding: '0.35rem 0.65rem',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: '#f0fdf4',
-                  borderColor: '#bbf7d0',
-                  color: '#059669'
-                }}
-                title="View group participants, roles, and details"
-              >
-                <Users style={{ width: '13px', height: '13px' }} />
-                <span className="header-label-tablet">Group Info</span>
-              </button>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          {/* Action Tools: Voice Call, Video Call, Sheets, Right Panel Info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, flexWrap: 'nowrap' }}>
+            {isDirectChat && (
+              <>
                 <button
                   type="button"
-                  onClick={() => setIsLinkedSheetsOpen(true)}
-                  className="btn btn-secondary chat-action-btn"
+                  onClick={() => handleStartCall('voice', chatDisplayName)}
                   style={{
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
+                    padding: '7px',
+                    borderRadius: '50%',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--brand-primary)',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    background: '#f0fdf4',
-                    borderColor: '#bbf7d0',
-                    color: '#15803d'
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease'
                   }}
-                  title="View all 8 linked Google Sheets, sync fresh data, or connect new sheets (100% Read-Only)"
+                  title={`Audio Call with ${chatDisplayName}`}
                 >
-                  <FileSpreadsheet style={{ width: '13px', height: '13px', color: '#16a34a' }} />
-                  <span className="header-label-tablet">Sheets</span>
-                  <span style={{ fontSize: '0.65rem', background: '#dcfce7', color: '#166534', padding: '1px 5px', borderRadius: '10px', fontWeight: 800 }}>8</span>
+                  <Phone style={{ width: '15px', height: '15px' }} />
                 </button>
 
                 <button
                   type="button"
-                  onClick={handleHeaderClick}
-                  className="btn btn-secondary chat-action-btn"
+                  onClick={() => handleStartCall('video', chatDisplayName)}
                   style={{
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
+                    padding: '7px',
+                    borderRadius: '50%',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--brand-primary)',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    background: '#e0f2fe',
-                    borderColor: '#bae6fd',
-                    color: '#0369a1'
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease'
                   }}
-                  title="View PulseBot AI capabilities and webhook status"
+                  title={`FaceTime / Video Call with ${chatDisplayName}`}
                 >
-                  <Sparkles style={{ width: '13px', height: '13px', color: '#0284c7' }} />
-                  <span className="header-label-tablet">AI Details</span>
+                  <Video style={{ width: '15px', height: '15px' }} />
                 </button>
-              </div>
+              </>
             )}
 
-            <div className="glass-card header-label-desktop" style={{ padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', fontWeight: 700, color: '#0284c7', whiteSpace: 'nowrap' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-              Persona: {activeUser.name} ({activeUser.role})
-            </div>
+            {activeChannel.type === 'ai' && (
+              <button
+                type="button"
+                onClick={() => setIsLinkedSheetsOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '5px 10px',
+                  borderRadius: '10px',
+                  background: 'var(--color-success-bg)',
+                  borderColor: 'var(--color-success)',
+                  color: 'var(--color-success)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+                title="View linked Google Sheets (8)"
+              >
+                <FileSpreadsheet style={{ width: '13px', height: '13px' }} />
+                <span className="header-label-tablet">Sheets</span>
+                <span style={{ fontSize: '0.62rem', background: 'var(--color-success)', color: '#fff', padding: '1px 5px', borderRadius: '8px', fontWeight: 800 }}>8</span>
+              </button>
+            )}
+
+            {/* Conversation Details & Right Panel Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+              style={{
+                padding: '7px',
+                borderRadius: '50%',
+                background: isRightPanelOpen ? 'var(--brand-primary)' : 'var(--bg-input)',
+                border: '1px solid var(--border-color)',
+                color: isRightPanelOpen ? '#FFFFFF' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.18s ease'
+              }}
+              title="Toggle Details & Conversation Information"
+            >
+              <Info style={{ width: '15px', height: '15px' }} />
+            </button>
           </div>
         </div>
+
+        {/* Encrypted Audio/Video Call Active Banner */}
+        {callNotification && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '70px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 70,
+              background: 'rgba(23, 23, 23, 0.92)',
+              color: '#FFFFFF',
+              backdropFilter: 'blur(16px)',
+              borderRadius: '20px',
+              padding: '8px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
+              animation: 'fadeIn 0.2s ease',
+              fontSize: '0.8rem',
+              fontWeight: 700
+            }}
+          >
+            <PhoneCall style={{ width: '16px', height: '16px', color: '#34C759' }} />
+            <span>Connecting {callNotification.type === 'video' ? 'FaceTime Video' : 'Encrypted Audio Call'} with {callNotification.name}...</span>
+          </div>
+        )}
 
         {/* AI Quick Prompts Bar (when chatting with PulseBot AI) */}
         {activeChannel.type === 'ai' && (
           <div
             className="chat-prompts-bar"
             style={{
-              background: '#f0f7ff',
-              borderBottom: '1px solid #bae6fd',
+              background: 'var(--bg-sidebar)',
+              borderBottom: '1px solid var(--border-color)',
               padding: '0.45rem 0.85rem',
               display: 'flex',
               gap: '0.45rem',
@@ -1976,11 +2167,11 @@ export default function ChatView() {
               WebkitOverflowScrolling: 'touch'
             }}
           >
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0284c7', alignSelf: 'center', flexShrink: 0, whiteSpace: 'nowrap' }}>Smart Prompts:</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--brand-primary)', alignSelf: 'center', flexShrink: 0, whiteSpace: 'nowrap' }}>AI Shortcuts:</span>
             <button
               onClick={() => setIsLinkedSheetsOpen(true)}
               className="btn btn-secondary"
-              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', background: '#ecfdf5', borderColor: '#a7f3d0', color: '#065f46', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}
+              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', background: 'var(--color-success-bg)', borderColor: 'var(--border-color)', color: 'var(--color-success)', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}
             >
               📊 Linked Sheets Hub (8)
             </button>
@@ -2003,7 +2194,7 @@ export default function ChatView() {
         <div
           ref={messagesContainerRef}
           onScroll={handleScroll}
-          className="chat-messages-feed whatsapp-chat-feed"
+          className="chat-messages-feed apple-chat-feed"
           style={{
             flex: 1,
             minHeight: 0,
@@ -2013,13 +2204,13 @@ export default function ChatView() {
             display: 'flex',
             flexDirection: 'column',
             gap: '0.65rem',
-            padding: '0.85rem 0.75rem',
+            padding: '0.85rem 0.85rem',
             scrollBehavior: 'smooth'
           }}
         >
-          {/* WhatsApp-style Reverse Pagination Header */}
+          {/* Pagination Header */}
           {chatPagination[activeChannelId]?.isLoadingMore ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0.6rem', color: '#0284c7', fontSize: '0.78rem', fontWeight: 700 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0.6rem', color: 'var(--brand-primary)', fontSize: '0.78rem', fontWeight: 700 }}>
               <Loader2 className="animate-spin" style={{ width: '16px', height: '16px' }} />
               <span>Loading earlier messages...</span>
             </div>
@@ -2034,9 +2225,9 @@ export default function ChatView() {
                   fontSize: '0.74rem',
                   fontWeight: 700,
                   borderRadius: '20px',
-                  background: 'rgba(2, 132, 199, 0.08)',
-                  borderColor: '#bae6fd',
-                  color: '#0369a1',
+                  background: 'var(--bg-input)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -2048,19 +2239,66 @@ export default function ChatView() {
               </button>
             </div>
           ) : channelMessages.length > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '0.5rem 0', opacity: 0.7 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '0.5rem 0', opacity: 0.6 }}>
               <div style={{ height: '1px', flex: 1, background: 'var(--border-color)' }} />
               <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Showing last 3 days messages
+                Encrypted End-to-End
               </span>
               <div style={{ height: '1px', flex: 1, background: 'var(--border-color)' }} />
             </div>
           ) : null}
 
+          {/* EMPTY CONVERSATION STATE: Dedicated Apple Intelligence Screen or Clean Messages State */}
           {channelMessages.length === 0 ? (
-            <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No messages yet in this conversation. Send a voice note, message, or file to start!
-            </div>
+            activeChannel.type === 'ai' ? (
+              <div className="ai-welcome-hero">
+                <div className="ai-siri-orb">
+                  <Sparkles style={{ width: '28px', height: '28px' }} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+                    How can I help you today?
+                  </h2>
+                  <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                    Your personal intelligence, always ready when you need it.
+                  </p>
+                </div>
+
+                <div className="ai-prompt-grid">
+                  {AI_SUGGESTED_PROMPTS.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="ai-prompt-card"
+                      onClick={() => handleQuickAiPrompt(item.prompt)}
+                    >
+                      <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>{item.icon}</span>
+                      <div>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          {item.title}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {item.desc}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)', gap: '10px', margin: 'auto' }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-primary)' }}>
+                  <MessageSquare style={{ width: '24px', height: '24px' }} />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    {chatDisplayName}
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    No messages yet. Send a message, photo, or audio note to begin chatting.
+                  </p>
+                </div>
+              </div>
+            )
           ) : (
             channelMessages.map(msg => {
               if (msg.messageType === 'system' || msg.senderId === 'system') {
@@ -2207,9 +2445,9 @@ export default function ChatView() {
                       </div>
                     )}
 
-                    {/* WhatsApp Message Bubble */}
+                    {/* Apple iMessage / AI Message Bubble */}
                     <div
-                      className={`chat-msg-bubble ${isSelf ? 'whatsapp-bubble-outgoing' : 'whatsapp-bubble-incoming'}`}
+                      className={`chat-msg-bubble ${isSelf ? 'apple-bubble-outgoing' : 'apple-bubble-incoming'}`}
                       style={{
                         padding: '0.65rem 0.95rem',
                         fontSize: '0.875rem',
@@ -2259,19 +2497,19 @@ export default function ChatView() {
                             gap: '0.75rem',
                             padding: '0.65rem 0.85rem',
                             borderRadius: '12px',
-                            background: isSelf ? 'rgba(255, 255, 255, 0.18)' : '#f0f9ff',
-                            border: isSelf ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid #bae6fd',
+                            background: isSelf ? 'rgba(255, 255, 255, 0.18)' : 'var(--bg-input)',
+                            border: isSelf ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-color)',
                             maxWidth: '320px'
                           }}
                         >
-                          <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: isSelf ? '#ffffff' : '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', flexShrink: 0 }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: isSelf ? '#ffffff' : 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-primary)', flexShrink: 0 }}>
                             <FileText style={{ width: '20px', height: '20px' }} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: '0.82rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelf ? '#ffffff' : 'var(--text-primary)' }}>
                               {msg.fileAttachment.name}
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-muted)' }}>
+                            <div style={{ fontSize: '0.68rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)' }}>
                               {msg.fileAttachment.size} KB • Document
                             </div>
                           </div>
@@ -2282,8 +2520,8 @@ export default function ChatView() {
                               width: '32px',
                               height: '32px',
                               borderRadius: '50%',
-                              background: isSelf ? '#ffffff' : '#0284c7',
-                              color: isSelf ? '#0284c7' : '#ffffff',
+                              background: isSelf ? '#ffffff' : 'var(--brand-primary)',
+                              color: isSelf ? 'var(--brand-primary)' : '#ffffff',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -2390,9 +2628,9 @@ export default function ChatView() {
                               marginTop: '0.75rem',
                               padding: '0.85rem 1rem',
                               borderRadius: '12px',
-                              background: isSelf ? 'rgba(255, 255, 255, 0.15)' : '#f8fafc',
-                              border: isSelf ? '1px solid rgba(255, 255, 255, 0.3)' : '1.5px solid #38bdf8',
-                              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.08)',
+                              background: isSelf ? 'rgba(255, 255, 255, 0.15)' : 'var(--bg-input)',
+                              border: isSelf ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-color)',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
@@ -2406,8 +2644,8 @@ export default function ChatView() {
                                   width: '38px',
                                   height: '38px',
                                   borderRadius: '8px',
-                                  background: isSelf ? '#ffffff' : '#fee2e2',
-                                  color: '#dc2626',
+                                  background: isSelf ? '#ffffff' : 'rgba(255, 59, 48, 0.1)',
+                                  color: '#FF3B30',
                                   display: 'flex',
                                   flexDirection: 'column',
                                   alignItems: 'center',
@@ -2415,17 +2653,17 @@ export default function ChatView() {
                                   fontWeight: 900,
                                   fontSize: '0.6rem',
                                   flexShrink: 0,
-                                  border: isSelf ? 'none' : '1px solid #fca5a5'
+                                  border: isSelf ? 'none' : '1px solid rgba(255, 59, 48, 0.2)'
                                 }}
                               >
                                 <FileText style={{ width: '16px', height: '16px' }} />
                                 <span>PDF</span>
                               </div>
                               <div>
-                                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelf ? '#ffffff' : '#0f172a' }}>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelf ? '#ffffff' : 'var(--text-primary)' }}>
                                   {pdfInfo.title || `Job Order Slip (Lot ${pdfInfo.lotNumber})`}
                                 </div>
-                                <div style={{ fontSize: '0.68rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : '#64748b' }}>
+                                <div style={{ fontSize: '0.68rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)' }}>
                                   {pdfInfo.filename || 'JobOrder.pdf'} • Ready for Download
                                 </div>
                               </div>
@@ -2440,14 +2678,14 @@ export default function ChatView() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                background: isSelf ? '#ffffff' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                                color: isSelf ? '#0284c7' : '#ffffff',
+                                background: isSelf ? '#ffffff' : 'var(--brand-primary)',
+                                color: isSelf ? 'var(--brand-primary)' : '#ffffff',
                                 padding: '6px 14px',
                                 borderRadius: '8px',
                                 fontSize: '0.78rem',
                                 fontWeight: 700,
                                 textDecoration: 'none',
-                                boxShadow: '0 2px 5px rgba(2, 132, 199, 0.25)',
+                                boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
                                 cursor: 'pointer'
                               }}
                             >
@@ -2486,9 +2724,9 @@ export default function ChatView() {
                             marginTop: '0.65rem',
                             padding: '0.5rem 0.75rem',
                             borderRadius: '8px',
-                            background: isSelf ? 'rgba(255, 255, 255, 0.2)' : '#f0f9ff',
-                            border: isSelf ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid #bae6fd',
-                            color: isSelf ? '#ffffff' : '#0284c7',
+                            background: isSelf ? 'rgba(255, 255, 255, 0.2)' : 'var(--bg-input)',
+                            border: isSelf ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-color)',
+                            color: isSelf ? '#ffffff' : 'var(--brand-primary)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
@@ -2502,15 +2740,63 @@ export default function ChatView() {
                         </div>
                       )}
 
-                      {/* WhatsApp Timestamp & Read Receipts */}
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', marginTop: '3px', opacity: 0.85 }}>
-                        <span style={{ fontSize: '0.65rem', color: isSelf ? '#166534' : '#64748b' }}>
-                          {getTimeAgo(msg.timestamp)}
-                        </span>
-                        {isSelf && (
-                          <CheckCheck style={{ width: '14px', height: '14px', color: '#53bdeb' }} title="Read" />
-                        )}
-                      </div>
+                      {/* Apple-Style AI Message Controls (Copy response, timestamp) */}
+                      {(isAi || (activeChannel.type === 'ai' && !isSelf)) ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {msg.text && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyMessage(msg.id, msg.text)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  background: copiedMsgId === msg.id ? 'var(--color-success-bg)' : 'transparent',
+                                  border: '1px solid var(--border-color)',
+                                  color: copiedMsgId === msg.id ? 'var(--color-success)' : 'var(--text-secondary)',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Copy AI Response"
+                              >
+                                {copiedMsgId === msg.id ? (
+                                  <>
+                                    <Check style={{ width: '12px', height: '12px' }} />
+                                    <span>Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy style={{ width: '12px', height: '12px' }} />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                              PulseBot AI
+                            </span>
+                          </div>
+
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                            {getTimeAgo(msg.timestamp)}
+                          </span>
+                        </div>
+                      ) : (
+                        /* Standard Message Timestamp & Read Receipts */
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', marginTop: '3px', opacity: 0.9 }}>
+                          <span style={{ fontSize: '0.65rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)' }}>
+                            {getTimeAgo(msg.timestamp)}
+                          </span>
+                          {isSelf && (
+                            <CheckCheck style={{ width: '14px', height: '14px', color: '#ffffff' }} title="Delivered & Read" />
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* WhatsApp Reaction Badges attached to bubble */}
@@ -2628,8 +2914,8 @@ export default function ChatView() {
           </button>
         )}
 
-        {/* WhatsApp-Style Input Controls */}
-        <div className="whatsapp-input-dock">
+        {/* Apple-Style Input Composer Dock */}
+        <div className="apple-composer-dock whatsapp-input-dock">
           {/* Emoji Picker Popover */}
           {showEmojiPicker && (
             <div
@@ -3017,23 +3303,23 @@ export default function ChatView() {
                 </button>
               </div>
             ) : (
-              <div className="whatsapp-input-row">
-                {/* WhatsApp Capsule Container */}
-                <div className="whatsapp-input-capsule">
+              <div className="apple-composer-row whatsapp-input-row">
+                {/* Apple Composer Capsule Container */}
+                <div className="apple-composer-capsule whatsapp-input-capsule">
                   {/* Emoji Picker Toggle Button */}
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="whatsapp-icon-btn"
+                    className="apple-icon-btn whatsapp-icon-btn"
                     title="Insert Emoji"
                   >
-                    <Smile style={{ width: '22px', height: '22px' }} />
+                    <Smile style={{ width: '21px', height: '21px' }} />
                   </button>
 
                   {/* Message Input Textbox */}
                   <input
                     type="text"
-                    placeholder="Message"
+                    placeholder={activeChannel.type === 'ai' ? 'Ask PulseBot AI anything or type a prompt...' : 'Message'}
                     value={messageInput}
                     onChange={handleInputChange}
                     onKeyDown={(e) => {
@@ -3042,17 +3328,17 @@ export default function ChatView() {
                         handleSend(e);
                       }
                     }}
-                    className="whatsapp-text-field"
+                    className="apple-text-field whatsapp-text-field"
                   />
 
                   {/* Paperclip Attach Menu Toggle */}
                   <button
                     type="button"
                     onClick={() => setShowAttachMenu(!showAttachMenu)}
-                    className="whatsapp-icon-btn"
+                    className="apple-icon-btn whatsapp-icon-btn"
                     title="Attach Media / Files"
                   >
-                    <Paperclip style={{ width: '20px', height: '20px', transform: 'rotate(-45deg)' }} />
+                    <Paperclip style={{ width: '19px', height: '19px', transform: 'rotate(-45deg)' }} />
                   </button>
 
                   {/* Tag Person Button */}
@@ -3063,14 +3349,14 @@ export default function ChatView() {
                       setShowEmojiPicker(false);
                       setShowAttachMenu(false);
                     }}
-                    className="whatsapp-icon-btn"
+                    className="apple-icon-btn whatsapp-icon-btn"
                     style={{
-                      color: taggedUser ? '#00a884' : '#54656f',
-                      background: taggedUser ? 'rgba(0, 168, 132, 0.12)' : 'none'
+                      color: taggedUser ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                      background: taggedUser ? 'var(--brand-glow)' : 'none'
                     }}
                     title="Tag & Assign Task"
                   >
-                    <AtSign style={{ width: '19px', height: '19px' }} />
+                    <AtSign style={{ width: '18px', height: '18px' }} />
                   </button>
                 </div>
 
@@ -3078,19 +3364,19 @@ export default function ChatView() {
                 {messageInput.trim().length > 0 ? (
                   <button
                     type="submit"
-                    className="whatsapp-circle-action-btn"
+                    className="apple-circle-action-btn whatsapp-circle-action-btn"
                     title="Send Message"
                   >
-                    <Send style={{ width: '18px', height: '18px', marginLeft: '2px' }} />
+                    <Send style={{ width: '17px', height: '17px', marginLeft: '2px' }} />
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={startRecording}
-                    className="whatsapp-circle-action-btn"
+                    className="apple-circle-action-btn whatsapp-circle-action-btn"
                     title="Record Voice Note"
                   >
-                    <Mic style={{ width: '20px', height: '20px' }} />
+                    <Mic style={{ width: '19px', height: '19px' }} />
                   </button>
                 )}
               </div>
@@ -3098,6 +3384,207 @@ export default function ChatView() {
           </form>
         </div>
       </div>
+
+      {/* OPTIONAL RIGHT PANEL: Contact information, Profile details, Media & attachments */}
+      {isRightPanelOpen && (
+        <div className="chat-info-pane">
+          {/* Header */}
+          <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Info style={{ width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>Conversation Info</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsRightPanelOpen(false)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '50%', display: 'flex' }}
+              title="Close Details"
+            >
+              <X style={{ width: '16px', height: '16px' }} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', overflowY: 'auto' }}>
+            {/* Profile / Identity Card */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0.5rem 0' }}>
+              {activeChannel.type === 'ai' ? (
+                <div className="ai-siri-orb" style={{ width: '64px', height: '64px', minWidth: '64px', margin: '0 0 10px 0', fontSize: '1.75rem' }}>
+                  <Sparkles style={{ width: '28px', height: '28px' }} />
+                </div>
+              ) : activeChannel.type === 'group' ? (
+                <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'var(--color-success-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-success)', margin: '0 0 10px 0' }}>
+                  <Users style={{ width: '32px', height: '32px' }} />
+                </div>
+              ) : chatDisplayAvatar ? (
+                <img
+                  src={chatDisplayAvatar}
+                  alt={chatDisplayName}
+                  style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)', margin: '0 0 10px 0' }}
+                />
+              ) : (
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-primary)', fontWeight: 800, fontSize: '1.4rem', border: '2px solid var(--border-color)', margin: '0 0 10px 0' }}>
+                  {chatDisplayName ? chatDisplayName.slice(0, 2).toUpperCase() : 'DM'}
+                </div>
+              )}
+
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                {chatDisplayName}
+              </h4>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
+                {activeChannel.type === 'ai' ? 'Autonomous Enterprise Agent • Gemini 2.5' : chatDisplayRole}
+              </span>
+
+              {/* Quick Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                {isDirectChat && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleStartCall('voice', chatDisplayName)}
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '5px' }}
+                    >
+                      <Phone style={{ width: '13px', height: '13px' }} />
+                      <span>Call</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStartCall('video', chatDisplayName)}
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '5px' }}
+                    >
+                      <Video style={{ width: '13px', height: '13px' }} />
+                      <span>Video</span>
+                    </button>
+                  </>
+                )}
+                {activeChannel.type === 'ai' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsLinkedSheetsOpen(true)}
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '5px', color: 'var(--color-success)', borderColor: 'var(--color-success)' }}
+                  >
+                    <FileSpreadsheet style={{ width: '13px', height: '13px' }} />
+                    <span>8 Linked Sheets</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* AI Intelligence / Channel Details */}
+            <div style={{ background: 'var(--bg-input)', borderRadius: '12px', padding: '10px 12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                About & Security
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+                {activeChannel.type === 'ai'
+                  ? 'PulseBot AI is synchronized with Google Sheets and enterprise workflows to answer operational questions, analyze SS 331 job orders, and delegate tasks.'
+                  : activeChannel.description || 'Messages and calls in this conversation are secured with TLS 1.3 enterprise encryption.'}
+              </div>
+            </div>
+
+            {/* Media & Shared Attachments Overview */}
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Shared Media & Documents</span>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                  {channelMessages.filter(m => m.imageUrl || m.fileAttachment || m.audioUrl).length} items
+                </span>
+              </div>
+
+              {(() => {
+                const mediaMessages = channelMessages.filter(m => m.imageUrl || m.fileAttachment).slice(-6).reverse();
+                if (mediaMessages.length === 0) {
+                  return (
+                    <div style={{ padding: '14px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '10px', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                      No media or files shared yet.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                    {mediaMessages.map(item => {
+                      if (item.imageUrl) {
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => setPreviewImage(item.imageUrl)}
+                            style={{
+                              aspectRatio: '1',
+                              borderRadius: '8px',
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              border: '1px solid var(--border-color)',
+                              background: 'var(--bg-input)'
+                            }}
+                          >
+                            <img src={item.imageUrl} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        );
+                      }
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            aspectRatio: '1',
+                            borderRadius: '8px',
+                            padding: '4px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            textAlign: 'center'
+                          }}
+                        >
+                          <FileText style={{ width: '20px', height: '20px', color: 'var(--brand-primary)' }} />
+                          <span style={{ fontSize: '0.55rem', fontWeight: 700, marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', whiteSpace: 'nowrap' }}>
+                            {item.fileAttachment?.name || 'File'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Participants List for Groups */}
+            {(activeChannel.type === 'group' || activeChannel.type === 'public') && (
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                  Participants ({activeChannel.participantIds?.length || 0})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {(activeChannel.participantIds || []).map(pid => {
+                    const u = users.find(user => String(user.id) === String(pid));
+                    if (!u) return null;
+                    return (
+                      <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', borderRadius: '8px', background: 'var(--bg-card)' }}>
+                        <img
+                          src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=007AFF&color=fff&size=60`}
+                          alt={u.name}
+                          style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.name}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{u.role}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
 
       {/* Lightbox Image Preview Modal */}

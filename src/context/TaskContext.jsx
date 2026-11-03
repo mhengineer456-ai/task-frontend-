@@ -94,14 +94,55 @@ export const TaskProvider = ({ children }) => {
     department: 'General'
   });
 
-  const [theme, setTheme] = useState(() => {
+  const [theme, setThemeState] = useState(() => {
     try {
       const saved = localStorage.getItem('taskpulse_theme');
-      return (saved && saved !== 'dark') ? saved : 'light';
+      if (saved === 'dark' || saved === 'light' || saved === 'system') return saved;
+      return 'system';
     } catch (e) {
-      return 'light';
+      return 'system';
     }
   });
+
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => setSystemPrefersDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const effectiveTheme = theme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : theme;
+
+  const setTheme = (newTheme) => {
+    if (newTheme === 'dark' || newTheme === 'light' || newTheme === 'system') {
+      setThemeState(newTheme);
+    } else {
+      setThemeState(prev => prev === 'dark' ? 'light' : 'dark');
+    }
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('taskpulse_theme', theme);
+    } catch (e) {}
+
+    const isDark = effectiveTheme === 'dark';
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, [theme, effectiveTheme]);
 
   const [activeView, setActiveView] = useState(() => {
     const savedMode = safeGetLocalStorage('taskpulse_panel_mode', 'admin');
@@ -725,12 +766,14 @@ export const TaskProvider = ({ children }) => {
 
   useEffect(() => {
     safeSetLocalStorage('taskpulse_theme', theme);
-    if (theme === 'dark') {
+    if (effectiveTheme === 'dark') {
       document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
     }
-  }, [theme]);
+  }, [theme, effectiveTheme]);
 
   // Timer Tick Effect
   useEffect(() => {
@@ -1923,6 +1966,7 @@ export const TaskProvider = ({ children }) => {
         setActiveUserId,
         updateUserKraAndKpi,
         theme,
+        effectiveTheme,
         setTheme,
         panelMode,
         setPanelMode,

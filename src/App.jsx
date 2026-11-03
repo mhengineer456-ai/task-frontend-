@@ -29,10 +29,12 @@ import EaDashboardView from './components/ea/EaDashboardView';
 import RealtimeToastContainer from './components/common/RealtimeToastContainer';
 import MobileBottomNav from './components/common/MobileBottomNav';
 import { Monitor } from 'lucide-react';
+import { useMobileBackNavigation } from './hooks/useMobileBackNavigation';
 
 function MainLayout() {
   const {
     activeView,
+    setActiveView,
     panelMode,
     activeUser,
     selectedTaskId,
@@ -45,6 +47,7 @@ function MainLayout() {
     setEditingTask,
     viewingUserProfile,
     setViewingUserProfile,
+    isMobileMenuOpen,
     setIsMobileMenuOpen,
     deviceMode,
     setDeviceMode,
@@ -52,6 +55,26 @@ function MainLayout() {
   } = useTaskContext();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  // Universal Mobile Navigation: handles back gesture & hardware back button
+  useMobileBackNavigation({
+    activeView,
+    setActiveView,
+    viewingUserProfile,
+    setViewingUserProfile,
+    selectedTaskId,
+    setSelectedTaskId,
+    isCreateModalOpen,
+    setIsCreateModalOpen,
+    editingTask,
+    setEditingTask,
+    isNotificationsOpen,
+    setIsNotificationsOpen,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+    isRegisterModalOpen,
+    setIsRegisterModalOpen
+  });
 
   // Automatically close any slide-over drawers when navigating between views
   useEffect(() => {

@@ -20,7 +20,8 @@ import {
   Upload,
   Link as LinkIcon,
   Check,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ArrowLeft
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -35,14 +36,16 @@ const PRESET_AVATARS = [
 ];
 
 export default function UserProfileModal({ userId, onClose }) {
-  const { users, tasks, leaves, activeUser, updateUserProfile } = useTaskContext();
-  const [activeTab, setActiveTab] = useState('kpi'); // 'kpi' | 'tasks' | 'leaves' | 'skills'
+  const { users, tasks, leaves, activeUser, updateUserProfile, isMobileView } = useTaskContext();
+  const [activeTab, setActiveTab] = useState('kpi'); // 'kpi' | 'tasks' | 'leaves'
   const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
   const [customPhotoUrl, setCustomPhotoUrl] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [isSavingPhoto, setIsSavingPhoto] = useState(false);
   const fileInputRef = useRef(null);
+
+  const isMobile = isMobileView || (typeof window !== 'undefined' && window.innerWidth <= 768);
 
   const user = users.find(u => String(u.id) === String(userId) || (userId && u.name?.trim().toLowerCase() === String(userId).trim().toLowerCase())) || users.find(u => u.id === userId) || users[0];
   if (!user) return null;
@@ -141,10 +144,10 @@ export default function UserProfileModal({ userId, onClose }) {
       if (updateUserProfile) {
         await updateUserProfile(user.id, { avatar: customPhotoUrl.trim() });
       }
-      setUploadSuccess('Profile photo updated!');
-      setCustomPhotoUrl('');
+      setUploadSuccess('Photo updated from URL!');
       setIsSavingPhoto(false);
       setIsPhotoPickerOpen(false);
+      setCustomPhotoUrl('');
       setTimeout(() => setUploadSuccess(''), 3000);
     } catch (err) {
       setUploadError('Failed to save photo URL.');
@@ -167,8 +170,8 @@ export default function UserProfileModal({ userId, onClose }) {
 
   const kpi = user.kpi || { onTimeRate: 92, avgResolutionHours: 14, overdueRate: 2, qualityScore: 95, slaCompliance: 98 };
   const kraList = user.kraList || [
-    { id: 'kra-def-1', title: 'Task Execution & Delivery', weight: 50, score: 95, status: 'On Track', description: 'Deliver assigned sprint deliverables on schedule.' },
-    { id: 'kra-def-2', title: 'Quality Assurance & Code Review', weight: 50, score: 98, status: 'Exceeding', description: 'Maintain high accuracy and zero critical defects.' }
+    { id: 'kra-def-1', title: 'Task Execution & Delivery', weight: 50, score: 95, status: 'On Track', description: 'Deliver assigned deliverables and tasks on schedule.' },
+    { id: 'kra-def-2', title: 'Quality Assurance & Accuracy', weight: 50, score: 98, status: 'Exceeding', description: 'Maintain high standard of work with zero critical defects.' }
   ];
 
   return (
@@ -176,13 +179,14 @@ export default function UserProfileModal({ userId, onClose }) {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 100,
-        background: 'rgba(15, 23, 42, 0.65)',
+        zIndex: 1200,
+        background: 'rgba(15, 23, 42, 0.72)',
         backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
-        alignItems: 'center',
-        justify: 'center',
-        padding: '1.5rem',
+        alignItems: isMobile ? 'flex-end' : 'center',
+        justifyContent: 'center',
+        padding: isMobile ? '0' : '1.5rem',
         animation: 'fadeIn 0.2s ease-out'
       }}
       onClick={onClose}
@@ -191,15 +195,17 @@ export default function UserProfileModal({ userId, onClose }) {
         className="glass-panel"
         style={{
           background: '#ffffff',
-          borderRadius: 'var(--radius-xl)',
+          borderRadius: isMobile ? '0' : '20px',
           width: '100%',
-          maxWidth: '850px',
-          maxHeight: '90vh',
+          maxWidth: isMobile ? '100%' : '840px',
+          height: isMobile ? '100%' : 'auto',
+          maxHeight: isMobile ? '100dvh' : '90vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          boxShadow: 'var(--shadow-xl)',
-          border: '1px solid #bae6fd'
+          boxShadow: isMobile ? 'none' : '0 25px 60px rgba(0, 0, 0, 0.25)',
+          border: isMobile ? 'none' : '1px solid #bae6fd',
+          padding: 0
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -212,22 +218,50 @@ export default function UserProfileModal({ userId, onClose }) {
           onChange={handleFileChange}
         />
 
-        {/* Header Hero */}
+        {/* Top Navigation Bar with Back & Close Buttons */}
         <div
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px',
             background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
             color: '#ffffff',
-            padding: '1.25rem 1.5rem',
-            position: 'relative'
+            borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+            flexShrink: 0
           }}
         >
           <button
+            type="button"
             onClick={onClose}
             style={{
-              position: 'absolute',
-              top: '1.5rem',
-              right: '1.5rem',
-              background: 'rgba(255, 255, 255, 0.2)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(255, 255, 255, 0.18)',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '6px 12px',
+              color: '#ffffff',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+            title="Back to previous screen"
+          >
+            <ArrowLeft style={{ width: '16px', height: '16px' }} />
+            <span>Back</span>
+          </button>
+
+          <span style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#e0f2fe' }}>
+            Employee Dossier
+          </span>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'rgba(255, 255, 255, 0.18)',
               border: 'none',
               color: '#ffffff',
               borderRadius: '50%',
@@ -235,88 +269,164 @@ export default function UserProfileModal({ userId, onClose }) {
               height: '32px',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               cursor: 'pointer'
             }}
+            title="Close Profile"
           >
-            <X style={{ width: '18px', height: '18px' }} />
+            <X style={{ width: '17px', height: '17px' }} />
           </button>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        {/* Header Hero */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 60%, #1e3a8a 100%)',
+            color: '#ffffff',
+            padding: isMobile ? '16px 16px 18px' : '20px 24px',
+            flexShrink: 0
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'center' : 'flex-start',
+              textAlign: isMobile ? 'center' : 'left',
+              gap: isMobile ? '12px' : '20px'
+            }}
+          >
+            {/* Avatar with Camera badge */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
               {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=0284c7&color=fff&size=150`;
-                }}
-                style={{
-                  width: '84px',
-                  height: '84px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '4px solid rgba(255, 255, 255, 0.4)',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '84px',
-                  height: '84px',
-                  borderRadius: '50%',
-                  background: 'rgba(255, 255, 255, 0.25)',
-                  color: '#ffffff',
-                  fontWeight: 800,
-                  fontSize: '2rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justify: 'center',
-                  border: '4px solid rgba(255, 255, 255, 0.4)',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
-                }}
-              >
-                {user.name.slice(0, 2).toUpperCase()}
-              </div>
-            )}
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=0284c7&color=fff&size=150`;
+                  }}
+                  style={{
+                    width: isMobile ? '76px' : '88px',
+                    height: isMobile ? '76px' : '88px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3.5px solid rgba(255, 255, 255, 0.7)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.22)'
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: isMobile ? '76px' : '88px',
+                    height: isMobile ? '76px' : '88px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    fontSize: isMobile ? '1.8rem' : '2.2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '3.5px solid rgba(255, 255, 255, 0.7)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.22)'
+                  }}
+                >
+                  {user.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
 
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => setIsPhotoPickerOpen(!isPhotoPickerOpen)}
+              {/* Online Dot */}
+              <span
                 style={{
                   position: 'absolute',
-                  bottom: '0',
-                  right: '0',
-                  background: '#ffffff',
-                  color: '#0284c7',
-                  border: '2px solid #0284c7',
+                  top: '2px',
+                  right: '2px',
+                  width: '14px',
+                  height: '14px',
                   borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
+                  background: '#10b981',
+                  border: '2.5px solid #0284c7',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                }}
+                title="Online"
+              />
+
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setIsPhotoPickerOpen(!isPhotoPickerOpen)}
+                  style={{
+                    position: 'absolute',
+                    bottom: '-2px',
+                    right: '-2px',
+                    background: '#ffffff',
+                    color: '#0284c7',
+                    border: '2px solid #0284c7',
+                    borderRadius: '50%',
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 3px 8px rgba(0,0,0,0.25)'
+                  }}
+                  title="Upload or change profile photo"
+                >
+                  <Camera style={{ width: '14px', height: '14px' }} />
+                </button>
+              )}
+            </div>
+
+            {/* Profile Info */}
+            <div style={{ flex: 1, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
+              <div
+                style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: '0 3px 8px rgba(0,0,0,0.2)'
+                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginBottom: '6px'
                 }}
-                title="Upload or change profile photo"
               >
-                <Camera style={{ width: '16px', height: '16px' }} />
-              </button>
-            )}
-          </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', margin: 0 }}>
+                <h2
+                  style={{
+                    fontSize: isMobile ? '1.35rem' : '1.65rem',
+                    fontWeight: 900,
+                    color: '#ffffff',
+                    letterSpacing: '-0.02em',
+                    margin: 0
+                  }}
+                >
                   {user.name}
                 </h2>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, background: '#ffffff', color: '#0284c7', padding: '3px 10px', borderRadius: '99px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
+
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    background: '#ffffff',
+                    color: '#0284c7',
+                    padding: '2px 8px',
+                    borderRadius: '99px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                  }}
+                >
                   {user.employeeId || 'EMP-1001'}
                 </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, background: 'rgba(255, 255, 255, 0.25)', color: '#ffffff', padding: '3px 10px', borderRadius: '99px' }}>
+
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    background: user.role === 'EA' ? '#fef3c7' : user.role === 'Manager' ? '#dcfce7' : 'rgba(255, 255, 255, 0.25)',
+                    color: user.role === 'EA' ? '#b45309' : user.role === 'Manager' ? '#166534' : '#ffffff',
+                    padding: '2px 9px',
+                    borderRadius: '99px'
+                  }}
+                >
                   {user.role}
                 </span>
 
@@ -326,11 +436,11 @@ export default function UserProfileModal({ userId, onClose }) {
                     onClick={() => setIsPhotoPickerOpen(!isPhotoPickerOpen)}
                     style={{
                       background: 'rgba(255, 255, 255, 0.2)',
-                      border: '1px solid rgba(255, 255, 255, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.35)',
                       color: '#ffffff',
-                      fontSize: '0.72rem',
+                      fontSize: '0.7rem',
                       fontWeight: 700,
-                      padding: '3px 10px',
+                      padding: '2px 8px',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -338,29 +448,64 @@ export default function UserProfileModal({ userId, onClose }) {
                       gap: '4px'
                     }}
                   >
-                    <Camera style={{ width: '12px', height: '12px' }} />
-                    <span>Change Profile Photo</span>
+                    <Camera style={{ width: '11px', height: '11px' }} />
+                    <span>Change Photo</span>
                   </button>
                 )}
               </div>
 
-              <p style={{ fontSize: '0.875rem', color: '#e0f2fe', margin: '0 0 0.75rem 0', fontWeight: 600 }}>
-                {user.department} • Reports to <span style={{ textDecoration: 'underline' }}>{user.managerName || 'Executive Board'}</span>
+              {/* Department & Reports To */}
+              <p
+                style={{
+                  fontSize: '0.82rem',
+                  color: '#e0f2fe',
+                  margin: '0 0 6px 0',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: '6px'
+                }}
+              >
+                <span>{user.department || 'Operations'}</span>
+                <span>•</span>
+                <span>Reports to <strong style={{ color: '#ffffff' }}>{user.managerName || 'Executive Board'}</strong></span>
               </p>
 
-              <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.8125rem', color: '#bae6fd' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Mail style={{ width: '14px', height: '14px' }} />
-                  {user.email}
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Calendar style={{ width: '14px', height: '14px' }} />
-                  Joined {user.hireDate || '2023-01-15'}
+              {/* Email & Joined Date */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: isMobile ? 'center' : 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  fontSize: '0.78rem',
+                  color: '#bae6fd'
+                }}
+              >
+                <a
+                  href={`mailto:${user.email}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    color: '#bae6fd',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <Mail style={{ width: '13px', height: '13px' }} />
+                  <span>{user.email}</span>
+                </a>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Calendar style={{ width: '13px', height: '13px' }} />
+                  <span>Joined {user.hireDate || 'Jan 2023'}</span>
                 </span>
               </div>
 
               {uploadSuccess && (
-                <div style={{ marginTop: '0.5rem', background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ marginTop: '8px', background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <Check style={{ width: '14px', height: '14px' }} />
                   <span>{uploadSuccess}</span>
                 </div>
@@ -372,19 +517,19 @@ export default function UserProfileModal({ userId, onClose }) {
           {isPhotoPickerOpen && (
             <div
               style={{
-                marginTop: '1.25rem',
+                marginTop: '1rem',
                 background: '#ffffff',
                 color: '#0f172a',
-                padding: '1.25rem',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: '0 8px 25px rgba(0,0,0,0.18)',
+                padding: '1rem',
+                borderRadius: '16px',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.22)',
                 border: '1px solid #bae6fd',
                 animation: 'fadeIn 0.2s ease-out'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 800, margin: 0, color: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Camera style={{ width: '16px', height: '16px' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <h4 style={{ fontSize: '0.84rem', fontWeight: 800, margin: 0, color: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Camera style={{ width: '15px', height: '15px' }} />
                   <span>Select or Upload Profile Photo</span>
                 </h4>
                 <button
@@ -397,183 +542,269 @@ export default function UserProfileModal({ userId, onClose }) {
               </div>
 
               {uploadError && (
-                <div style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+                <div style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700, marginBottom: '0.75rem' }}>
                   {uploadError}
                 </div>
               )}
 
-              {/* Upload from Computer Button */}
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              {/* Upload from device button */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '0.85rem' }}>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isSavingPhoto}
-                  className="btn btn-primary"
-                  style={{ flex: 1, padding: '0.6rem 1rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
+                  }}
                 >
-                  <Upload style={{ width: '16px', height: '16px' }} />
-                  <span>{isSavingPhoto ? 'Saving Photo...' : 'Upload Image from Computer'}</span>
+                  <Upload style={{ width: '14px', height: '14px' }} />
+                  <span>{isSavingPhoto ? 'Saving...' : 'Upload Image from Device'}</span>
                 </button>
               </div>
 
-              {/* Paste Image URL */}
-              <form onSubmit={handleApplyCustomUrl} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <LinkIcon style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#64748b' }} />
-                  <input
-                    type="url"
-                    placeholder="Or paste image URL (e.g. https://...)"
-                    value={customPhotoUrl}
-                    onChange={(e) => setCustomPhotoUrl(e.target.value)}
-                    className="input-field"
-                    style={{ paddingLeft: '2rem', fontSize: '0.8rem', width: '100%' }}
-                  />
+              {/* Preset Avatars */}
+              <div style={{ marginBottom: '0.85rem' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Or Choose from Presets:
                 </div>
-                <button
-                  type="submit"
-                  disabled={!customPhotoUrl.trim() || isSavingPhoto}
-                  className="btn btn-secondary"
-                  style={{ background: '#f0f9ff', color: '#0284c7', borderColor: '#bae6fd', fontWeight: 700, fontSize: '0.8rem' }}
-                >
-                  Save URL
-                </button>
-              </form>
-
-              {/* Presets List */}
-              <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '0.5rem' }}>
-                  Or Choose from Curated Professional Avatars
-                </span>
-                <div style={{ display: 'flex', gap: '0.65rem', overflowX: 'auto', paddingBottom: '4px' }}>
-                  {PRESET_AVATARS.map((url, idx) => (
-                    <img
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px' }}>
+                  {PRESET_AVATARS.map((avatarUrl, idx) => (
+                    <button
                       key={idx}
-                      src={url}
-                      alt={`Avatar preset ${idx + 1}`}
-                      onClick={() => handleApplyPreset(url)}
+                      type="button"
+                      onClick={() => handleApplyPreset(avatarUrl)}
                       style={{
-                        width: '46px',
-                        height: '46px',
+                        padding: 0,
+                        border: user.avatar === avatarUrl ? '2.5px solid #0284c7' : '1px solid #cbd5e1',
                         borderRadius: '50%',
-                        objectFit: 'cover',
+                        overflow: 'hidden',
                         cursor: 'pointer',
-                        border: user.avatar === url ? '3px solid #0284c7' : '2px solid #e2e8f0',
-                        boxShadow: user.avatar === url ? '0 0 8px rgba(2, 132, 199, 0.4)' : 'none',
-                        transition: 'transform 0.15s ease'
+                        aspectRatio: '1',
+                        background: 'none'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      title="Click to apply this avatar"
-                    />
+                    >
+                      <img src={avatarUrl} alt="preset" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </button>
                   ))}
                 </div>
               </div>
+
+              {/* Custom Image URL form */}
+              <form onSubmit={handleApplyCustomUrl} style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="url"
+                  placeholder="Paste direct image URL (https://...)"
+                  value={customPhotoUrl}
+                  onChange={(e) => setCustomPhotoUrl(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '6px 10px',
+                    fontSize: '0.78rem',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={isSavingPhoto || !customPhotoUrl.trim()}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    color: '#0f172a'
+                  }}
+                >
+                  Apply
+                </button>
+              </form>
             </div>
           )}
         </div>
 
-        {/* Quick KPI Performance Summary Bar */}
-        <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2" style={{ gap: '0.75rem', padding: '1rem 1.25rem', background: '#f0f7ff', borderBottom: '1px solid #bae6fd' }}>
-          <div style={{ background: '#ffffff', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid #e0f2fe' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>SLA Compliance</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0284c7' }}>{kpi.slaCompliance}%</div>
+        {/* Quick KPI Performance Summary Bar (Crisp 2x2 on Mobile, 4x1 on Desktop) */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: '8px',
+            padding: isMobile ? '10px 14px' : '14px 20px',
+            background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            flexShrink: 0
+          }}
+        >
+          <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '12px', border: '1px solid #e0f2fe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>SLA Compliance</span>
+              <CheckCircle2 style={{ width: '13px', height: '13px', color: '#0284c7' }} />
+            </div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0284c7', margin: '2px 0 0' }}>{kpi.slaCompliance}%</div>
           </div>
-          <div style={{ background: '#ffffff', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid #e0f2fe' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>On-Time Rate</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>{kpi.onTimeRate}%</div>
+
+          <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '12px', border: '1px solid #e0f2fe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>On-Time Rate</span>
+              <TrendingUp style={{ width: '13px', height: '13px', color: '#10b981' }} />
+            </div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10b981', margin: '2px 0 0' }}>{kpi.onTimeRate}%</div>
           </div>
-          <div style={{ background: '#ffffff', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid #e0f2fe' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Avg Resolution</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0284c7' }}>{kpi.avgResolutionHours} hrs</div>
+
+          <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '12px', border: '1px solid #e0f2fe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Avg Resolution</span>
+              <Clock style={{ width: '13px', height: '13px', color: '#2563eb' }} />
+            </div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#2563eb', margin: '2px 0 0' }}>{kpi.avgResolutionHours} hrs</div>
           </div>
-          <div style={{ background: '#ffffff', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid #e0f2fe' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Performance Rating</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#8b5cf6' }}>{user.performanceReview?.rating || 4.8} ⭐</div>
+
+          <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '12px', border: '1px solid #e0f2fe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Rating</span>
+              <Award style={{ width: '13px', height: '13px', color: '#f59e0b' }} />
+            </div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#f59e0b', margin: '2px 0 0' }}>{user.performanceReview?.rating || 4.8} ⭐</div>
           </div>
         </div>
 
-        {/* Modal Navigation Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', padding: '0 2.5rem', background: '#ffffff' }}>
+        {/* Navigation Tabs Pill Bar (Horizontal Scrollable with zero clipping) */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            overflowX: 'auto',
+            padding: '10px 14px',
+            background: '#ffffff',
+            borderBottom: '1px solid #e2e8f0',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+            flexShrink: 0
+          }}
+        >
           <button
+            type="button"
             onClick={() => setActiveTab('kpi')}
             style={{
-              padding: '1rem 1.25rem',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '0.875rem',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              border: activeTab === 'kpi' ? '1px solid #0284c7' : '1px solid #e2e8f0',
+              background: activeTab === 'kpi' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#f8fafc',
+              color: activeTab === 'kpi' ? '#ffffff' : '#475569',
+              fontSize: '0.78rem',
               fontWeight: 800,
-              color: activeTab === 'kpi' ? '#0284c7' : '#64748b',
-              borderBottom: activeTab === 'kpi' ? '3px solid #0284c7' : '3px solid transparent',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              boxShadow: activeTab === 'kpi' ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
+              transition: 'all 0.15s ease'
             }}
           >
-            <BarChart3 style={{ width: '16px', height: '16px' }} />
+            <BarChart3 style={{ width: '14px', height: '14px' }} />
             <span>KPI & KRA Matrix</span>
           </button>
+
           <button
+            type="button"
             onClick={() => setActiveTab('tasks')}
             style={{
-              padding: '1rem 1.25rem',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '0.875rem',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              border: activeTab === 'tasks' ? '1px solid #0284c7' : '1px solid #e2e8f0',
+              background: activeTab === 'tasks' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#f8fafc',
+              color: activeTab === 'tasks' ? '#ffffff' : '#475569',
+              fontSize: '0.78rem',
               fontWeight: 800,
-              color: activeTab === 'tasks' ? '#0284c7' : '#64748b',
-              borderBottom: activeTab === 'tasks' ? '3px solid #0284c7' : '3px solid transparent',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              boxShadow: activeTab === 'tasks' ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
+              transition: 'all 0.15s ease'
             }}
           >
-            <Briefcase style={{ width: '16px', height: '16px' }} />
+            <Briefcase style={{ width: '14px', height: '14px' }} />
             <span>Tasks & Workload ({activeTasks.length})</span>
           </button>
+
           <button
+            type="button"
             onClick={() => setActiveTab('leaves')}
             style={{
-              padding: '1rem 1.25rem',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '0.875rem',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              border: activeTab === 'leaves' ? '1px solid #0284c7' : '1px solid #e2e8f0',
+              background: activeTab === 'leaves' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#f8fafc',
+              color: activeTab === 'leaves' ? '#ffffff' : '#475569',
+              fontSize: '0.78rem',
               fontWeight: 800,
-              color: activeTab === 'leaves' ? '#0284c7' : '#64748b',
-              borderBottom: activeTab === 'leaves' ? '3px solid #0284c7' : '3px solid transparent',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              boxShadow: activeTab === 'leaves' ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
+              transition: 'all 0.15s ease'
             }}
           >
-            <Calendar style={{ width: '16px', height: '16px' }} />
+            <Calendar style={{ width: '14px', height: '14px' }} />
             <span>Leave Balances & Status</span>
           </button>
         </div>
 
         {/* Tab Content Body */}
-        <div style={{ padding: '2rem 2.5rem', overflowY: 'auto', flex: 1, background: '#ffffff' }}>
+        <div
+          style={{
+            padding: isMobile ? '14px' : '20px 24px',
+            overflowY: 'auto',
+            flex: 1,
+            minHeight: 0,
+            background: '#ffffff',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: isMobile ? 'calc(36px + env(safe-area-inset-bottom, 20px))' : '24px'
+          }}
+        >
           {activeTab === 'kpi' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Award style={{ width: '18px', height: '18px', color: '#0284c7' }} />
-                  Key Result Areas (KRAs) & Weighted Scores
+                <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Award style={{ width: '17px', height: '17px', color: '#0284c7' }} />
+                  <span>Key Result Areas (KRAs) & Weighted Scores</span>
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {kraList.map(kra => (
-                    <div key={kra.id} style={{ background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <div key={kra.id} style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem', flexWrap: 'wrap', gap: '4px' }}>
                         <div>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a' }}>{kra.title}</span>
-                          <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>({kra.weight}% Weight)</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>{kra.title}</span>
+                          <span style={{ marginLeft: '0.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>({kra.weight}% Weight)</span>
                         </div>
                         <span style={{
-                          fontSize: '0.75rem',
+                          fontSize: '0.72rem',
                           fontWeight: 800,
-                          padding: '3px 10px',
+                          padding: '2px 8px',
                           borderRadius: '99px',
                           background: kra.status === 'Exceeding' ? '#dcfce7' : '#e0f2fe',
                           color: kra.status === 'Exceeding' ? '#166534' : '#0369a1'
@@ -581,8 +812,8 @@ export default function UserProfileModal({ userId, onClose }) {
                           {kra.status} • {kra.score}%
                         </span>
                       </div>
-                      <p style={{ fontSize: '0.78125rem', color: '#475569', margin: '0 0 0.75rem 0' }}>{kra.description}</p>
-                      <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                      <p style={{ fontSize: '0.75rem', color: '#475569', margin: '0 0 0.65rem 0', lineHeight: 1.4 }}>{kra.description}</p>
+                      <div style={{ width: '100%', height: '7px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                         <div style={{ width: `${kra.score}%`, height: '100%', background: kra.score >= 95 ? '#10b981' : '#0284c7', borderRadius: '4px' }}></div>
                       </div>
                     </div>
@@ -592,12 +823,12 @@ export default function UserProfileModal({ userId, onClose }) {
 
               {/* Manager Feedback */}
               {user.performanceReview?.managerFeedback && (
-                <div style={{ background: '#f0f7ff', border: '1px solid #bae6fd', padding: '1.25rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0284c7', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Sparkles style={{ width: '16px', height: '16px' }} />
-                    Supervisor Performance Evaluation ({user.performanceReview.evaluationPeriod || 'Q3 2026'})
+                <div style={{ background: '#f0f7ff', border: '1px solid #bae6fd', padding: '1rem', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284c7', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Sparkles style={{ width: '15px', height: '15px' }} />
+                    <span>Supervisor Performance Evaluation ({user.performanceReview.evaluationPeriod || 'Q3 2026'})</span>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: '#0f172a', fontStyle: 'italic', margin: 0 }}>
+                  <p style={{ fontSize: '0.82rem', color: '#0f172a', fontStyle: 'italic', margin: 0, lineHeight: 1.45 }}>
                     "{user.performanceReview.managerFeedback}"
                   </p>
                 </div>
@@ -607,72 +838,74 @@ export default function UserProfileModal({ userId, onClose }) {
 
           {activeTab === 'tasks' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Active Assigned Deliverables ({activeTasks.length})</h4>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Active Assigned Deliverables ({activeTasks.length})</h4>
               {activeTasks.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No active pending tasks for this employee.</div>
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.82rem', background: '#f8fafc', borderRadius: '12px' }}>
+                  No active pending tasks for this employee.
+                </div>
               ) : (
                 activeTasks.map(t => (
-                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
-                    <div>
-                      <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0284c7', marginRight: '0.5rem' }}>{t.id}</span>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>{t.title}</span>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Due: {t.dueDate?.slice(0, 10)} • Priority: {t.priority}</div>
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', marginRight: '0.4rem' }}>{t.id}</span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>{t.title}</span>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>Due: {t.dueDate?.slice(0, 10)} • Priority: {t.priority}</div>
                     </div>
-                    <span className="badge badge-brand">{t.status}</span>
+                    <span className="badge badge-brand" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>{t.status}</span>
                   </div>
                 ))
               )}
 
-              <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginTop: '1rem', margin: 0 }}>Recently Completed ({completedTasks.length})</h4>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem', margin: 0 }}>Recently Completed ({completedTasks.length})</h4>
               {completedTasks.slice(0, 3).map(t => (
-                <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
-                  <div>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#10b981', marginRight: '0.5rem' }}>{t.id}</span>
-                    <span style={{ fontSize: '0.85rem', color: '#475569', textDecoration: 'line-through' }}>{t.title}</span>
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.65rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981', marginRight: '0.4rem' }}>{t.id}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#475569', textDecoration: 'line-through' }}>{t.title}</span>
                   </div>
-                  <span className="badge badge-emerald">Approved</span>
+                  <span className="badge badge-emerald" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>Approved</span>
                 </div>
               ))}
             </div>
           )}
 
           {activeTab === 'leaves' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                <div style={{ background: '#f0f7ff', border: '1px solid #bae6fd', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7' }}>Casual Leave</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0c4a6e', margin: '0.25rem 0' }}>{12 - usedCasual} / 12</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Used: {usedCasual} days</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(3, 1fr)', gap: '8px' }}>
+                <div style={{ background: '#f0f7ff', border: '1px solid #bae6fd', padding: '0.85rem', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0284c7' }}>Casual Leave</div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0c4a6e', margin: '2px 0' }}>{12 - usedCasual} / 12</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Used: {usedCasual} days</div>
                 </div>
 
-                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#166534' }}>Medical / Sick Leave</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#14532d', margin: '0.25rem 0' }}>{10 - usedSick} / 10</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Used: {usedSick} days</div>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '0.85rem', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#166534' }}>Medical / Sick Leave</div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#14532d', margin: '2px 0' }}>{10 - usedSick} / 10</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Used: {usedSick} days</div>
                 </div>
 
-                <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7e22ce' }}>Earned / Paid Leave</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#581c87', margin: '0.25rem 0' }}>{18 - usedEarned} / 18</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Used: {usedEarned} days</div>
+                <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', padding: '0.85rem', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#7e22ce' }}>Earned / Paid Leave</div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#581c87', margin: '2px 0' }}>{18 - usedEarned} / 18</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Used: {usedEarned} days</div>
                 </div>
               </div>
 
               <div>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>Leave History & Applications</h4>
+                <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.65rem' }}>Leave History & Applications</h4>
                 {userLeaves.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '1.5rem', background: '#f8fafc', borderRadius: 'var(--radius-md)', color: '#64748b', fontSize: '0.85rem' }}>No leave applications on file for this user.</div>
+                  <div style={{ textAlign: 'center', padding: '1.25rem', background: '#f8fafc', borderRadius: '12px', color: '#64748b', fontSize: '0.8rem' }}>No leave applications on file for this user.</div>
                 ) : (
                   userLeaves.map(l => (
-                    <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0', marginBottom: '0.5rem' }}>
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>{l.leaveType} ({l.totalDays} Days)</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{l.startDate} to {l.endDate} • Reason: "{l.reason}"</div>
+                    <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '0.45rem', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>{l.leaveType} ({l.totalDays} Days)</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{l.startDate} to {l.endDate} • Reason: "{l.reason}"</div>
                       </div>
                       <span style={{
-                        fontSize: '0.75rem',
+                        fontSize: '0.7rem',
                         fontWeight: 800,
-                        padding: '4px 10px',
+                        padding: '3px 8px',
                         borderRadius: '99px',
                         background: l.status === 'Approved' ? '#dcfce7' : l.status === 'Rejected' ? '#fee2e2' : '#e0f2fe',
                         color: l.status === 'Approved' ? '#166534' : l.status === 'Rejected' ? '#991b1b' : '#0369a1'
