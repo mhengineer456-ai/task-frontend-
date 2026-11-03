@@ -16,6 +16,7 @@ import SettingsView from './components/settings/SettingsView';
 import ManagerPanelView from './components/manager/ManagerPanelView';
 import EmployeePanelView from './components/employee/EmployeePanelView';
 import ChatView from './components/chat/ChatView';
+import StatusPage from './components/status/StatusPage';
 import ChatFloatingWidget from './components/chat/ChatFloatingWidget';
 import UserRegistrationModal from './components/auth/UserRegistrationModal';
 import NotificationsDrawer from './components/notifications/NotificationsDrawer';
@@ -129,6 +130,7 @@ function MainLayout() {
           {activeView === 'eaPanel' && (panelMode === 'manager' || activeUser?.role === 'Manager') && <ManagerPanelView />}
           {activeView === 'eaPanel' && (panelMode === 'employee' || activeUser?.role === 'Employee') && <EmployeePanelView />}
           {activeView === 'chat' && <ChatView />}
+          {activeView === 'status' && <StatusPage />}
           {activeView === 'managerPanel' && <ManagerPanelView />}
           {activeView === 'employeePanel' && <EmployeePanelView />}
           {activeView === 'mytasks' && <MyTasksView />}

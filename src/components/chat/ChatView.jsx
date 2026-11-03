@@ -54,6 +54,7 @@ import ProductionTrackingCard from './ProductionTrackingCard';
 import AiTaskDelegationCard from './AiTaskDelegationCard';
 import { extractTrackingData, splitMessageIntroAndNotes } from '../../utils/trackingDataParser';
 import StatusCarousel from '../status/StatusCarousel';
+import StatusListPane from '../status/StatusListPane';
 import StatusCreatorModal from '../status/StatusCreatorModal';
 import StatusViewerModal from '../status/StatusViewerModal';
 import StatusPrivacyModal from '../status/StatusPrivacyModal';
@@ -1672,25 +1673,38 @@ export default function ChatView() {
             >
               Groups ({filteredChannels.filter(c => c.type === 'group' || c.type === 'public').length})
             </button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab('status')}
+              className={`apple-segmented-tab ${sidebarTab === 'status' ? 'active' : ''}`}
+              title="Status updates"
+            >
+              <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#25D366', marginRight: '4px' }} />
+              Status
+            </button>
           </div>
         </div>
 
-        {/* WhatsApp / Instagram Stories Status Carousel */}
-        <StatusCarousel />
+        {sidebarTab === 'status' ? (
+          <StatusListPane />
+        ) : (
+          <>
+            {/* WhatsApp / Instagram Stories Status Carousel */}
+            <StatusCarousel />
 
-        {/* Conversations & Team Member List */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            padding: '0.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.65rem'
-          }}
-        >
+            {/* Conversations & Team Member List */}
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                overscrollBehavior: 'contain',
+                padding: '0.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem'
+              }}
+            >
           {/* Pinned AI Assistant Card (Visible in 'all' or 'ai') */}
           {(sidebarTab === 'all' || sidebarTab === 'ai') && (() => {
             const aiChannel = chatChannels.find(c => c.type === 'ai' || c.id === 'chan-ai') || { id: 'chan-ai', name: 'PulseBot AI' };
@@ -1911,7 +1925,9 @@ export default function ChatView() {
             </div>
           )}
         </div>
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Main Conversation Stream */}
       <div

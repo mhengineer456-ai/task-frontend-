@@ -22,7 +22,8 @@ import {
   ShieldAlert,
   Sliders,
   ChevronDown,
-  UserCheck
+  UserCheck,
+  CircleDot
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -118,6 +119,13 @@ export default function Sidebar() {
           icon: MessageSquare,
           badge: 'Live AI',
           badgeClass: 'badge-purple'
+        },
+        {
+          id: 'status',
+          label: 'Status Updates',
+          icon: CircleDot,
+          badge: 'Stories',
+          badgeClass: 'badge-brand'
         },
         { id: 'automations', label: 'Automations Builder', icon: Zap },
         { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
