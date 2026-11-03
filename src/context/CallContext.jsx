@@ -190,10 +190,28 @@ export const CallProvider = ({ children, activeUser }) => {
 
     // Remote track handler
     pc.ontrack = (event) => {
-      console.log('📡 [WebRTC] Remote track received:', event.track.kind);
-      const stream = event.streams && event.streams[0] ? event.streams[0] : new MediaStream([event.track]);
-      remoteStreamRef.current = stream;
-      setRemoteStream(stream);
+      console.log('📡 [WebRTC] Remote track received:', event.track.kind, 'id:', event.track.id);
+      let stream = remoteStreamRef.current;
+      if (!stream) {
+        stream = new MediaStream();
+        remoteStreamRef.current = stream;
+      }
+      if (event.streams && event.streams[0]) {
+        event.streams[0].getTracks().forEach((track) => {
+          if (!stream.getTracks().some(t => t.id === track.id)) {
+            stream.addTrack(track);
+          }
+        });
+      } else if (event.track) {
+        if (!stream.getTracks().some(t => t.id === event.track.id)) {
+          stream.addTrack(event.track);
+        }
+      }
+      // Ensure all audio tracks are enabled and active
+      stream.getAudioTracks().forEach((t) => {
+        t.enabled = true;
+      });
+      setRemoteStream(new MediaStream(stream.getTracks()));
     };
 
     // ICE Candidate handler
@@ -260,21 +278,34 @@ export const CallProvider = ({ children, activeUser }) => {
     activeSoundRef.current = startOutgoingRingback();
 
     try {
-      // 1. Acquire Local User Media
-      const constraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: isVideo ? {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          facingMode: 'user'
-        } : false
-      };
+      // 1. Acquire Local User Media with fallback
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: isVideo ? {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: 'user'
+          } : false
+        });
+      } catch (err) {
+        console.warn('Strict audio constraints failed, using simple audio: true', err);
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: isVideo ? true : false
+        });
+      }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Ensure all audio tracks are explicitly enabled
+      stream.getAudioTracks().forEach((t) => {
+        t.enabled = true;
+      });
+
       localStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -368,21 +399,34 @@ export const CallProvider = ({ children, activeUser }) => {
     }
 
     try {
-      // 1. Acquire Local Media
-      const constraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: isVideo ? {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          facingMode: 'user'
-        } : false
-      };
+      // 1. Acquire Local Media with fallback
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: isVideo ? {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: 'user'
+          } : false
+        });
+      } catch (err) {
+        console.warn('Strict audio constraints failed, using simple audio: true', err);
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: isVideo ? true : false
+        });
+      }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Ensure all audio tracks are explicitly enabled
+      stream.getAudioTracks().forEach((t) => {
+        t.enabled = true;
+      });
+
       localStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -669,7 +713,10 @@ export const CallProvider = ({ children, activeUser }) => {
             } catch (e) {}
           }
 
-          const answer = await pc.createAnswer();
+          const answer = await pc.createAnswer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: callType === 'video'
+          });
           await pc.setLocalDescription(answer);
 
           socket.emit('call:answer', {

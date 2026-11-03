@@ -12,7 +12,7 @@ import {
   Minimize2,
   ChevronDown,
   AlertCircle,
-  Sparkles
+  Volume1
 } from 'lucide-react';
 import { useCallContext } from '../../context/CallContext';
 
@@ -42,16 +42,64 @@ export default function CallOverlayModal() {
     togglePiPMinimized
   } = useCallContext();
 
+  const remoteAudioRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const modalContainerRef = useRef(null);
+
+  const [audioAutoplayBlocked, setAudioAutoplayBlocked] = useState(false);
 
   // Local PiP drag position
   const [pipPos, setPipPos] = useState({ x: 24, y: 24 });
   const [isDraggingPip, setIsDraggingPip] = useState(false);
   const dragStartRef = useRef({ startX: 0, startY: 0, initialX: 24, initialY: 24 });
 
-  // Attach local video stream
+  // 1. Dedicated Remote Audio Stream Attachment
+  // This ensures audio plays for BOTH simple voice calls and video calls without cutting off
+  useEffect(() => {
+    const audioEl = remoteAudioRef.current;
+    if (!audioEl) return;
+
+    if (remoteStream && remoteStream.getAudioTracks().length > 0) {
+      console.log('🔊 [Audio Engine] Binding remoteStream to audio element. Audio tracks:', remoteStream.getAudioTracks().length);
+      audioEl.srcObject = remoteStream;
+      audioEl.muted = !isSpeakerOn;
+      audioEl.volume = 1.0;
+
+      const playPromise = audioEl.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('🔊 [Audio Engine] Audio playback started successfully.');
+            setAudioAutoplayBlocked(false);
+          })
+          .catch((err) => {
+            console.warn('⚠️ [Audio Engine] Autoplay blocked by browser policy, awaiting interaction:', err);
+            setAudioAutoplayBlocked(true);
+          });
+      }
+    } else {
+      audioEl.srcObject = null;
+    }
+  }, [remoteStream, isSpeakerOn, callState]);
+
+  // Handle speaker toggle
+  useEffect(() => {
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = !isSpeakerOn;
+    }
+  }, [isSpeakerOn]);
+
+  // Click-to-unblock audio handler in case browser policies require explicit interaction
+  const handleEnableAudio = () => {
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.play().then(() => {
+        setAudioAutoplayBlocked(false);
+      }).catch((e) => console.warn('Could not start audio:', e));
+    }
+  };
+
+  // 2. Attach local video stream
   useEffect(() => {
     if (localVideoRef.current) {
       if (localStream) {
@@ -62,7 +110,7 @@ export default function CallOverlayModal() {
     }
   }, [localStream, callState]);
 
-  // Attach remote video stream
+  // 3. Attach remote video stream (muted to avoid double audio playback with remoteAudioRef)
   useEffect(() => {
     if (remoteVideoRef.current) {
       if (remoteStream) {
@@ -125,299 +173,341 @@ export default function CallOverlayModal() {
   // If IDLE, render nothing
   if (callState === 'IDLE') return null;
 
-  // ====================================================================
-  // 1. INCOMING CALL MODAL DIALOG (WhatsApp Web Style)
-  // ====================================================================
-  if (callState === 'INCOMING') {
-    return (
-      <div className="call-incoming-backdrop">
-        <div className="call-incoming-card">
-          <div className="call-avatar-wrapper pulsing">
-            <img
-              src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=150`}
-              alt={remoteUser?.name}
-              className="call-avatar-img"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=150`;
-              }}
-            />
-            <div className="call-incoming-type-badge">
-              {callType === 'video' ? <Video size={16} /> : <Phone size={16} />}
-            </div>
-          </div>
-
-          <div className="call-incoming-info">
-            <h3 className="call-incoming-title">{remoteUser?.name || 'Team Member'}</h3>
-            <p className="call-incoming-subtitle">
-              Incoming {callType === 'video' ? 'Video' : 'Voice'} Call...
-            </p>
-          </div>
-
-          {/* Action Buttons: Accept / Reject */}
-          <div className="call-incoming-actions">
-            <button
-              type="button"
-              onClick={() => rejectCall('Call declined')}
-              className="call-btn-circle call-btn-reject"
-              title="Decline Call"
-            >
-              <PhoneOff size={24} />
-            </button>
-
-            <button
-              type="button"
-              onClick={acceptCall}
-              className="call-btn-circle call-btn-accept"
-              title={`Accept ${callType === 'video' ? 'Video' : 'Voice'} Call`}
-            >
-              {callType === 'video' ? <Video size={24} /> : <Phone size={24} />}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ====================================================================
-  // 2. MINIMIZED PICTURE-IN-PICTURE (PIP) FLOATING WIDGET
-  // ====================================================================
-  if (isPiPMinimized && (callState === 'CONNECTED' || callState === 'CONNECTING')) {
-    return (
-      <div
-        className="call-minimized-pip"
-        onClick={togglePiPMinimized}
-        title="Click to expand call"
-      >
-        <div className="call-minimized-avatar">
-          <img
-            src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=80`}
-            alt={remoteUser?.name}
-          />
-          <span className="call-live-indicator" />
-        </div>
-        <div className="call-minimized-details">
-          <span className="call-minimized-name">{remoteUser?.name || 'In Call'}</span>
-          <span className="call-minimized-timer">{formatTime(duration)}</span>
-        </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            endCall();
-          }}
-          className="call-minimized-end"
-          title="End Call"
-        >
-          <PhoneOff size={14} />
-        </button>
-      </div>
-    );
-  }
-
-  // ====================================================================
-  // 3. FULL CALL SCREEN OVERLAY (Outgoing, Voice, Video, or Notice)
-  // ====================================================================
-  const isVideoCall = callType === 'video';
-  const isConnected = callState === 'CONNECTED';
-  const isConnecting = callState === 'CONNECTING';
-  const isRinging = callState === 'RINGING' || callState === 'INITIATING';
-  const isFailedOrEnded = ['REJECTED', 'MISSED', 'ENDED', 'BUSY', 'FAILED'].includes(callState);
-
   return (
-    <div
-      ref={modalContainerRef}
-      className={`call-full-overlay ${isFullscreen ? 'call-fullscreen' : ''}`}
-    >
-      {/* Top Header Bar */}
-      <div className="call-top-bar">
-        <div className="call-top-left">
-          <div className="call-security-badge">
-            <span className="call-lock-icon">🔒</span>
-            <span>End-to-end encrypted</span>
-          </div>
-        </div>
+    <>
+      {/* 
+        CRITICAL: Persistent Remote Audio Element
+        Always mounted whenever callState !== 'IDLE' so voice never drops or fails during simple calls
+      */}
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        playsInline
+        style={{ position: 'fixed', top: 0, left: 0, width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}
+      />
 
-        <div className="call-top-center">
-          {isConnected ? (
-            <div className="call-timer-chip">
-              <span className="call-record-dot" />
-              <span>{formatTime(duration)}</span>
-            </div>
-          ) : (
-            <div className="call-status-chip">
-              {isRinging ? (isCaller ? 'Ringing...' : 'Calling...') : isConnecting ? 'Connecting...' : (errorMessage || callState)}
-            </div>
-          )}
-        </div>
-
-        <div className="call-top-right">
-          {isConnected && (
-            <button
-              type="button"
-              onClick={togglePiPMinimized}
-              className="call-header-btn"
-              title="Minimize to window"
-            >
-              <ChevronDown size={18} />
-            </button>
-          )}
-          {isVideoCall && (
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="call-header-btn"
-              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-            >
-              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main View Area */}
-      <div className="call-main-stage">
-        {/* If Active Video Call */}
-        {isVideoCall && isConnected ? (
-          <div className="call-video-stage">
-            {/* Remote Video Stream (Main Background) */}
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="call-remote-video"
-            />
-
-            {/* Remote Fallback Avatar if remote camera is paused */}
-            {!remoteStream && (
-              <div className="call-remote-placeholder">
-                <div className="call-large-avatar">
-                  <img
-                    src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=200`}
-                    alt={remoteUser?.name}
-                  />
-                </div>
-                <h2 className="call-participant-name">{remoteUser?.name}</h2>
-                <p className="call-audio-badge">Audio connected</p>
-              </div>
-            )}
-
-            {/* Floating Draggable Local PiP Video Window */}
-            <div
-              className={`call-local-pip-box ${isDraggingPip ? 'dragging' : ''}`}
-              style={{
-                right: `${pipPos.x}px`,
-                bottom: `${pipPos.y}px`
-              }}
-              onMouseDown={handlePipMouseDown}
-              title="Drag to reposition preview"
-            >
-              {isVideoOff ? (
-                <div className="call-local-pip-off">
-                  <VideoOff size={22} />
-                  <span>Camera Off</span>
-                </div>
-              ) : (
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="call-local-video"
-                />
-              )}
-              <div className="call-local-pip-label">
-                <span>You</span>
-                {isMuted && <MicOff size={11} color="#EF4444" />}
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Voice Call Screen / Outgoing Calling Screen / Notice Screen */
-          <div className="call-voice-stage">
-            <div className={`call-large-avatar ${isRinging ? 'pulsing' : ''}`}>
-              <img
-                src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=220`}
-                alt={remoteUser?.name}
-              />
-              {isConnected && (
-                <div className="call-voice-waves">
-                  <span className="wave-bar bar-1" />
-                  <span className="wave-bar bar-2" />
-                  <span className="wave-bar bar-3" />
-                  <span className="wave-bar bar-4" />
-                </div>
-              )}
-            </div>
-
-            <h2 className="call-participant-name">{remoteUser?.name || 'Workspace Colleague'}</h2>
-            <p className="call-status-label">
-              {isRinging
-                ? (isCaller ? 'Ringing...' : 'Calling...')
-                : isConnecting
-                ? 'Connecting audio stream...'
-                : isConnected
-                ? `Active ${callType === 'video' ? 'Video' : 'Voice'} Call • ${formatTime(duration)}`
-                : (errorMessage || 'Call ended')}
-            </p>
-
-            {isFailedOrEnded && (
-              <div className="call-ended-notice">
-                <AlertCircle size={16} />
-                <span>{errorMessage || 'Call ended'}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Floating Bottom Control Dock (WhatsApp Web Style) */}
-      <div className="call-control-dock">
-        {/* Mic Toggle */}
-        <button
-          type="button"
-          onClick={toggleMute}
-          disabled={isFailedOrEnded}
-          className={`call-dock-btn ${isMuted ? 'btn-active-off' : ''}`}
-          title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+      {/* Autoplay blocked banner: Click to unmute if browser policy requires it */}
+      {audioAutoplayBlocked && (callState === 'CONNECTED' || callState === 'CONNECTING') && (
+        <div
+          onClick={handleEnableAudio}
+          style={{
+            position: 'fixed',
+            top: '72px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100002,
+            background: '#25D366',
+            color: '#ffffff',
+            padding: '9px 20px',
+            borderRadius: '24px',
+            fontWeight: 700,
+            fontSize: '0.82rem',
+            cursor: 'pointer',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'callCardPop 0.25s ease'
+          }}
+          title="Click to enable call voice audio"
         >
-          {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-        </button>
+          <Volume1 size={18} />
+          <span>Tap to unmute call audio</span>
+        </div>
+      )}
 
-        {/* Video Camera Toggle */}
-        {isVideoCall && (
+      {/* ====================================================================
+          1. INCOMING CALL MODAL DIALOG (WhatsApp Web Style)
+          ==================================================================== */}
+      {callState === 'INCOMING' ? (
+        <div className="call-incoming-backdrop">
+          <div className="call-incoming-card">
+            <div className="call-avatar-wrapper pulsing">
+              <img
+                src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=150`}
+                alt={remoteUser?.name}
+                className="call-avatar-img"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=150`;
+                }}
+              />
+              <div className="call-incoming-type-badge">
+                {callType === 'video' ? <Video size={16} /> : <Phone size={16} />}
+              </div>
+            </div>
+
+            <div className="call-incoming-info">
+              <h3 className="call-incoming-title">{remoteUser?.name || 'Team Member'}</h3>
+              <p className="call-incoming-subtitle">
+                Incoming {callType === 'video' ? 'Video' : 'Voice'} Call...
+              </p>
+            </div>
+
+            {/* Action Buttons: Accept / Reject */}
+            <div className="call-incoming-actions">
+              <button
+                type="button"
+                onClick={() => rejectCall('Call declined')}
+                className="call-btn-circle call-btn-reject"
+                title="Decline Call"
+              >
+                <PhoneOff size={24} />
+              </button>
+
+              <button
+                type="button"
+                onClick={acceptCall}
+                className="call-btn-circle call-btn-accept"
+                title={`Accept ${callType === 'video' ? 'Video' : 'Voice'} Call`}
+              >
+                {callType === 'video' ? <Video size={24} /> : <Phone size={24} />}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : isPiPMinimized && (callState === 'CONNECTED' || callState === 'CONNECTING') ? (
+        /* ====================================================================
+            2. MINIMIZED PICTURE-IN-PICTURE (PIP) FLOATING WIDGET
+            ==================================================================== */
+        <div
+          className="call-minimized-pip"
+          onClick={togglePiPMinimized}
+          title="Click to expand call"
+        >
+          <div className="call-minimized-avatar">
+            <img
+              src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=80`}
+              alt={remoteUser?.name}
+            />
+            <span className="call-live-indicator" />
+          </div>
+          <div className="call-minimized-details">
+            <span className="call-minimized-name">{remoteUser?.name || 'In Call'}</span>
+            <span className="call-minimized-timer">{formatTime(duration)}</span>
+          </div>
           <button
             type="button"
-            onClick={toggleVideo}
-            disabled={isFailedOrEnded}
-            className={`call-dock-btn ${isVideoOff ? 'btn-active-off' : ''}`}
-            title={isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
+            onClick={(e) => {
+              e.stopPropagation();
+              endCall();
+            }}
+            className="call-minimized-end"
+            title="End Call"
           >
-            {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+            <PhoneOff size={14} />
           </button>
-        )}
+        </div>
+      ) : (
+        /* ====================================================================
+            3. FULL CALL SCREEN OVERLAY (Outgoing, Voice, Video, or Notice)
+            ==================================================================== */
+        (() => {
+          const isVideoCall = callType === 'video';
+          const isConnected = callState === 'CONNECTED';
+          const isConnecting = callState === 'CONNECTING';
+          const isRinging = callState === 'RINGING' || callState === 'INITIATING';
+          const isFailedOrEnded = ['REJECTED', 'MISSED', 'ENDED', 'BUSY', 'FAILED'].includes(callState);
 
-        {/* Speaker Output Toggle */}
-        <button
-          type="button"
-          onClick={toggleSpeaker}
-          disabled={isFailedOrEnded}
-          className={`call-dock-btn ${!isSpeakerOn ? 'btn-active-off' : ''}`}
-          title={isSpeakerOn ? 'Mute Speaker' : 'Turn On Speaker'}
-        >
-          {isSpeakerOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
-        </button>
+          return (
+            <div
+              ref={modalContainerRef}
+              className={`call-full-overlay ${isFullscreen ? 'call-fullscreen' : ''}`}
+            >
+              {/* Top Header Bar */}
+              <div className="call-top-bar">
+                <div className="call-top-left">
+                  <div className="call-security-badge">
+                    <span className="call-lock-icon">🔒</span>
+                    <span>End-to-end encrypted</span>
+                  </div>
+                </div>
 
-        {/* Red End Call Button */}
-        <button
-          type="button"
-          onClick={() => endCall(isRinging ? 'Cancelled' : 'Call ended')}
-          className="call-dock-btn btn-danger-end"
-          title="End Call"
-        >
-          <PhoneOff size={22} />
-        </button>
-      </div>
-    </div>
+                <div className="call-top-center">
+                  {isConnected ? (
+                    <div className="call-timer-chip">
+                      <span className="call-record-dot" />
+                      <span>{formatTime(duration)}</span>
+                    </div>
+                  ) : (
+                    <div className="call-status-chip">
+                      {isRinging ? (isCaller ? 'Ringing...' : 'Calling...') : isConnecting ? 'Connecting...' : (errorMessage || callState)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="call-top-right">
+                  {isConnected && (
+                    <button
+                      type="button"
+                      onClick={togglePiPMinimized}
+                      className="call-header-btn"
+                      title="Minimize to window"
+                    >
+                      <ChevronDown size={18} />
+                    </button>
+                  )}
+                  {isVideoCall && (
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      className="call-header-btn"
+                      title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                    >
+                      {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Main View Area */}
+              <div className="call-main-stage">
+                {/* If Active Video Call */}
+                {isVideoCall && isConnected ? (
+                  <div className="call-video-stage">
+                    {/* Remote Video Stream (Main Background, video-only to avoid echo with audio element) */}
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="call-remote-video"
+                    />
+
+                    {/* Remote Fallback Avatar if remote camera is paused */}
+                    {!remoteStream && (
+                      <div className="call-remote-placeholder">
+                        <div className="call-large-avatar">
+                          <img
+                            src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=200`}
+                            alt={remoteUser?.name}
+                          />
+                        </div>
+                        <h2 className="call-participant-name">{remoteUser?.name}</h2>
+                        <p className="call-audio-badge">Audio connected</p>
+                      </div>
+                    )}
+
+                    {/* Floating Draggable Local PiP Video Window */}
+                    <div
+                      className={`call-local-pip-box ${isDraggingPip ? 'dragging' : ''}`}
+                      style={{
+                        right: `${pipPos.x}px`,
+                        bottom: `${pipPos.y}px`
+                      }}
+                      onMouseDown={handlePipMouseDown}
+                      title="Drag to reposition preview"
+                    >
+                      {isVideoOff ? (
+                        <div className="call-local-pip-off">
+                          <VideoOff size={22} />
+                          <span>Camera Off</span>
+                        </div>
+                      ) : (
+                        <video
+                          ref={localVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="call-local-video"
+                        />
+                      )}
+                      <div className="call-local-pip-label">
+                        <span>You</span>
+                        {isMuted && <MicOff size={11} color="#EF4444" />}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Voice Call Screen / Outgoing Calling Screen / Notice Screen */
+                  <div className="call-voice-stage">
+                    <div className={`call-large-avatar ${isRinging ? 'pulsing' : ''}`}>
+                      <img
+                        src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=220`}
+                        alt={remoteUser?.name}
+                      />
+                      {isConnected && (
+                        <div className="call-voice-waves">
+                          <span className="wave-bar bar-1" />
+                          <span className="wave-bar bar-2" />
+                          <span className="wave-bar bar-3" />
+                          <span className="wave-bar bar-4" />
+                        </div>
+                      )}
+                    </div>
+
+                    <h2 className="call-participant-name">{remoteUser?.name || 'Workspace Colleague'}</h2>
+                    <p className="call-status-label">
+                      {isRinging
+                        ? (isCaller ? 'Ringing...' : 'Calling...')
+                        : isConnecting
+                        ? 'Connecting voice channel...'
+                        : isConnected
+                        ? `Connected • Voice Call (${formatTime(duration)})`
+                        : (errorMessage || 'Call ended')}
+                    </p>
+
+                    {isFailedOrEnded && (
+                      <div className="call-ended-notice">
+                        <AlertCircle size={16} />
+                        <span>{errorMessage || 'Call ended'}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Floating Bottom Control Dock (WhatsApp Web Style) */}
+              <div className="call-control-dock">
+                {/* Mic Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  disabled={isFailedOrEnded}
+                  className={`call-dock-btn ${isMuted ? 'btn-active-off' : ''}`}
+                  title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+                >
+                  {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                </button>
+
+                {/* Video Camera Toggle */}
+                {isVideoCall && (
+                  <button
+                    type="button"
+                    onClick={toggleVideo}
+                    disabled={isFailedOrEnded}
+                    className={`call-dock-btn ${isVideoOff ? 'btn-active-off' : ''}`}
+                    title={isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
+                  >
+                    {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+                  </button>
+                )}
+
+                {/* Speaker Output Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleSpeaker}
+                  disabled={isFailedOrEnded}
+                  className={`call-dock-btn ${!isSpeakerOn ? 'btn-active-off' : ''}`}
+                  title={isSpeakerOn ? 'Mute Speaker' : 'Turn On Speaker'}
+                >
+                  {isSpeakerOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                </button>
+
+                {/* Red End Call Button */}
+                <button
+                  type="button"
+                  onClick={() => endCall(isRinging ? 'Cancelled' : 'Call ended')}
+                  className="call-dock-btn btn-danger-end"
+                  title="End Call"
+                >
+                  <PhoneOff size={22} />
+                </button>
+              </div>
+            </div>
+          );
+        })()
+      )}
+    </>
   );
 }
