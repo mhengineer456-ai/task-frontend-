@@ -53,6 +53,10 @@ import LinkedSheetsModal from './LinkedSheetsModal';
 import ProductionTrackingCard from './ProductionTrackingCard';
 import AiTaskDelegationCard from './AiTaskDelegationCard';
 import { extractTrackingData, splitMessageIntroAndNotes } from '../../utils/trackingDataParser';
+import StatusCarousel from '../status/StatusCarousel';
+import StatusCreatorModal from '../status/StatusCreatorModal';
+import StatusViewerModal from '../status/StatusViewerModal';
+import StatusPrivacyModal from '../status/StatusPrivacyModal';
 
 const POPULAR_EMOJIS = [
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
@@ -1666,6 +1670,9 @@ export default function ChatView() {
             </button>
           </div>
         </div>
+
+        {/* WhatsApp / Instagram Stories Status Carousel */}
+        <StatusCarousel />
 
         {/* Conversations & Team Member List */}
         <div
@@ -3675,6 +3682,11 @@ export default function ChatView() {
           onClose={() => setIsLinkedSheetsOpen(false)}
         />
       )}
+
+      {/* WhatsApp / Instagram Status & Stories Feature Modals */}
+      <StatusCreatorModal />
+      <StatusViewerModal />
+      <StatusPrivacyModal />
     </div>
   );
 }

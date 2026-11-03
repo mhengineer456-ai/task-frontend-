@@ -5,6 +5,7 @@ import { eaService } from '../api/eaService';
 import { userService } from '../api/userService';
 import { authService } from '../api/authService';
 import { chatService } from '../api/chatService';
+import { statusService } from '../api/statusService';
 import { BASE_URL } from '../api/apiClient';
 import { initSocket, getSocket, joinUser, joinChannel, leaveChannel, sendTypingStatus } from '../api/socket';
 import {
@@ -30,6 +31,8 @@ export const useTaskContext = () => {
   }
   return context;
 };
+
+export const useTasks = useTaskContext;
 
 // Safe LocalStorage setter helper to prevent QuotaExceededError
 const safeSetLocalStorage = (key, value) => {
@@ -350,6 +353,18 @@ export const TaskProvider = ({ children }) => {
         }
       })
       .catch(err => console.log('Chat channels REST fallback:', err));
+
+    if (activeUserId) {
+      loadStatusFeed(activeUserId);
+      statusService.getStatusPrivacy(activeUserId)
+        .then(data => {
+          if (data && data.success && data.privacy) {
+            setStatusPrivacy(data.privacy);
+            safeSetLocalStorage('taskpulse_status_privacy', data.privacy);
+          }
+        })
+        .catch(() => {});
+    }
   }, [activeUserId]);
 
   useEffect(() => {
@@ -375,6 +390,35 @@ export const TaskProvider = ({ children }) => {
   const [typingUsers, setTypingUsers] = useState({});
   const [realtimeToasts, setRealtimeToasts] = useState([]);
   const [chatPagination, setChatPagination] = useState({}); // { [channelId]: { hasMore, isLoadingMore, oldestTimestamp } }
+
+  // WhatsApp-Style Status & Stories State
+  const [statusFeed, setStatusFeed] = useState(() => safeGetLocalStorage('taskpulse_status_feed', { myStatus: null, recentUpdates: [], viewedUpdates: [] }));
+  const [statusPrivacy, setStatusPrivacy] = useState(() => safeGetLocalStorage('taskpulse_status_privacy', { privacyType: 'contacts', excludedUsers: [], allowedUsers: [] }));
+  const [activeStatusStory, setActiveStatusStory] = useState(null); // { userGroup, startIndex, allGroups }
+  const [isStatusCreatorOpen, setIsStatusCreatorOpen] = useState(false);
+  const [isStatusPrivacyOpen, setIsStatusPrivacyOpen] = useState(false);
+  const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
+
+  const loadStatusFeed = async (uid = activeUserId) => {
+    if (!uid) return;
+    setIsLoadingStatuses(true);
+    try {
+      const data = await statusService.getStatusFeed(uid);
+      if (data && data.success) {
+        const feed = {
+          myStatus: data.myStatus || null,
+          recentUpdates: data.recentUpdates || [],
+          viewedUpdates: data.viewedUpdates || []
+        };
+        setStatusFeed(feed);
+        safeSetLocalStorage('taskpulse_status_feed', feed);
+      }
+    } catch (e) {
+      console.warn('Status feed fetch notice:', e);
+    } finally {
+      setIsLoadingStatuses(false);
+    }
+  };
 
   // Synthesize pleasant sound chime for live events using Web Audio API
   const playChime = (type = 'info') => {
@@ -585,6 +629,33 @@ export const TaskProvider = ({ children }) => {
       });
     };
 
+    const handleStatusCreated = () => {
+      loadStatusFeed(activeUser?.id);
+    };
+
+    const handleStatusViewed = (data) => {
+      if (!data) return;
+      if (data.ownerId === activeUser?.id) {
+        setStatusFeed(prev => {
+          if (!prev || !prev.myStatus) return prev;
+          const updatedStatuses = (prev.myStatus.statuses || []).map(s => {
+            if (s.id === data.statusId) {
+              return { ...s, views_count: data.viewsCount };
+            }
+            return s;
+          });
+          return {
+            ...prev,
+            myStatus: { ...prev.myStatus, statuses: updatedStatuses }
+          };
+        });
+      }
+    };
+
+    const handleStatusDeleted = () => {
+      loadStatusFeed(activeUser?.id);
+    };
+
     s.on('task:created', handleTaskCreated);
     s.on('task:updated', handleTaskUpdated);
     s.on('task:deleted', handleTaskDeleted);
@@ -595,6 +666,9 @@ export const TaskProvider = ({ children }) => {
     s.on('chat:channel_created', handleChannelCreated);
     s.on('notification:new', handleNotificationNew);
     s.on('leave:updated', handleLeaveUpdated);
+    s.on('status:created', handleStatusCreated);
+    s.on('status:viewed', handleStatusViewed);
+    s.on('status:deleted', handleStatusDeleted);
 
     return () => {
       s.off('task:created', handleTaskCreated);
@@ -607,8 +681,11 @@ export const TaskProvider = ({ children }) => {
       s.off('chat:channel_created', handleChannelCreated);
       s.off('notification:new', handleNotificationNew);
       s.off('leave:updated', handleLeaveUpdated);
+      s.off('status:created', handleStatusCreated);
+      s.off('status:viewed', handleStatusViewed);
+      s.off('status:deleted', handleStatusDeleted);
     };
-  }, [activeUser?.id, activeChannelId]);
+  }, [activeUserId, activeChannelId]);
 
   // Join channel room
   useEffect(() => {
@@ -1773,6 +1850,155 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
+  const publishStatus = async ({ type, content, mediaUrl, backgroundColor, textColor, fontStyle, privacyType, privacyUsers }) => {
+    try {
+      const pType = privacyType || statusPrivacy.privacyType || 'contacts';
+      const pUsers = privacyUsers || (pType === 'except' ? statusPrivacy.excludedUsers : pType === 'only' ? statusPrivacy.allowedUsers : []);
+
+      const res = await statusService.createStatus({
+        userId: activeUser.id,
+        userName: activeUser.name,
+        userAvatar: activeUser.avatar || '',
+        type,
+        content,
+        mediaUrl,
+        backgroundColor,
+        textColor,
+        fontStyle,
+        privacyType: pType,
+        privacyUsers: pUsers
+      });
+
+      if (res && res.success && res.status) {
+        await loadStatusFeed(activeUser.id);
+        triggerRealtimeToast({
+          title: 'Status Published',
+          message: 'Your status is now live for 24 hours.',
+          type: 'info'
+        });
+        return res.status;
+      }
+    } catch (error) {
+      console.error('Failed to publish status:', error);
+      throw error;
+    }
+  };
+
+  const viewStatus = async (statusId) => {
+    if (!statusId || !activeUser?.id) return;
+    try {
+      setStatusFeed(prev => {
+        if (!prev) return prev;
+        const markStatusInList = (list) => (list || []).map(group => {
+          const updatedStatuses = group.statuses.map(s => s.id === statusId ? { ...s, has_viewed: true } : s);
+          const hasUnviewed = updatedStatuses.some(s => !s.has_viewed);
+          return { ...group, statuses: updatedStatuses, hasUnviewed };
+        });
+
+        const updatedRecent = markStatusInList(prev.recentUpdates || []);
+        const newlyViewedGroups = updatedRecent.filter(g => !g.hasUnviewed);
+        const remainingRecent = updatedRecent.filter(g => g.hasUnviewed);
+        const updatedViewed = [...(prev.viewedUpdates || []), ...newlyViewedGroups];
+
+        return {
+          ...prev,
+          recentUpdates: remainingRecent,
+          viewedUpdates: updatedViewed
+        };
+      });
+
+      await statusService.recordStatusView(statusId, {
+        viewerId: activeUser.id,
+        viewerName: activeUser.name,
+        viewerAvatar: activeUser.avatar || ''
+      });
+    } catch (e) {
+      console.warn('Record status view notice:', e);
+    }
+  };
+
+  const fetchStatusViews = async (statusId) => {
+    if (!statusId || !activeUser?.id) return { views: [], totalViews: 0 };
+    try {
+      const res = await statusService.getStatusViews(statusId, activeUser.id);
+      if (res && res.success) {
+        return {
+          views: res.views || [],
+          totalViews: res.totalViews || 0
+        };
+      }
+      return { views: [], totalViews: 0 };
+    } catch (e) {
+      console.error('Failed to fetch status views:', e);
+      return { views: [], totalViews: 0 };
+    }
+  };
+
+  const removeStatus = async (statusId) => {
+    if (!statusId || !activeUser?.id) return;
+    try {
+      await statusService.deleteStatus(statusId, activeUser.id);
+      await loadStatusFeed(activeUser.id);
+      triggerRealtimeToast({
+        title: 'Status Deleted',
+        message: 'Your status update was removed.',
+        type: 'info'
+      });
+    } catch (e) {
+      console.error('Failed to delete status:', e);
+      throw e;
+    }
+  };
+
+  const saveStatusPrivacy = async (settings) => {
+    if (!activeUser?.id) return;
+    try {
+      await statusService.updateStatusPrivacy(activeUser.id, settings);
+      setStatusPrivacy(settings);
+      safeSetLocalStorage('taskpulse_status_privacy', settings);
+      triggerRealtimeToast({
+        title: 'Privacy Updated',
+        message: 'Status privacy preferences saved.',
+        type: 'info'
+      });
+    } catch (e) {
+      console.error('Failed to update status privacy:', e);
+      throw e;
+    }
+  };
+
+  const sendStatusReply = async (statusId, text) => {
+    if (!statusId || !text || !activeUser?.id) return;
+    try {
+      const res = await statusService.replyToStatus(statusId, {
+        senderId: activeUser.id,
+        senderName: activeUser.name,
+        senderRole: activeUser.role,
+        senderAvatar: activeUser.avatar || '',
+        text
+      });
+      if (res && res.success) {
+        triggerRealtimeToast({
+          title: 'Reply Sent',
+          message: 'Your reply was delivered as a direct message.',
+          type: 'chat'
+        });
+        return res;
+      }
+    } catch (e) {
+      console.error('Failed to send status reply:', e);
+      throw e;
+    }
+  };
+
+  const openStatusStory = (userGroup, startIndex = 0, allGroups = []) => {
+    setActiveStatusStory({ userGroup, startIndex, allGroups });
+  };
+
+  const closeStatusStory = () => {
+    setActiveStatusStory(null);
+  };
+
   const generatePulseBotAiReply = async (userPrompt, imageUrl = null, taggedUserId = null, requireEaFollowup = false) => {
     setIsAiTyping(true);
     let replyText = '';
@@ -2061,7 +2287,24 @@ export const TaskProvider = ({ children }) => {
         deviceMode,
         setDeviceMode,
         toggleDeviceMode,
-        isMobileView
+        isMobileView,
+        statusFeed,
+        statusPrivacy,
+        activeStatusStory,
+        isStatusCreatorOpen,
+        setIsStatusCreatorOpen,
+        isStatusPrivacyOpen,
+        setIsStatusPrivacyOpen,
+        isLoadingStatuses,
+        loadStatusFeed,
+        publishStatus,
+        viewStatus,
+        fetchStatusViews,
+        removeStatus,
+        saveStatusPrivacy,
+        sendStatusReply,
+        openStatusStory,
+        closeStatusStory
       }}
 
     >
