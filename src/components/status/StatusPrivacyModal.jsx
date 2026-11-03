@@ -2,13 +2,18 @@ import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
 import { X, Shield, Check, Users, UserMinus, UserCheck, Search } from 'lucide-react';
 
-export default function StatusPrivacyModal({ isOpen, onClose }) {
+export default function StatusPrivacyModal({ isOpen: propIsOpen, onClose: propOnClose }) {
   const {
     users = [],
     activeUser,
     statusPrivacy = { privacyType: 'contacts', excludedUsers: [], allowedUsers: [] },
-    saveStatusPrivacy
+    saveStatusPrivacy,
+    isStatusPrivacyOpen,
+    setIsStatusPrivacyOpen
   } = useTaskContext();
+
+  const isOpen = propIsOpen !== undefined ? propIsOpen : isStatusPrivacyOpen;
+  const onClose = propOnClose || (() => setIsStatusPrivacyOpen(false));
 
   const [selectedType, setSelectedType] = useState(statusPrivacy.privacyType || 'contacts');
   const [excludedIds, setExcludedIds] = useState(statusPrivacy.excludedUsers || []);

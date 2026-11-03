@@ -1114,7 +1114,11 @@ export default function ChatView() {
     reactToMessage,
     setViewingUserProfile,
     chatPagination = {},
-    loadMoreMessages
+    loadMoreMessages,
+    isStatusCreatorOpen,
+    setIsStatusCreatorOpen,
+    isStatusPrivacyOpen,
+    setIsStatusPrivacyOpen
   } = useTaskContext();
 
   const [messageInput, setMessageInput] = useState('');
@@ -3684,9 +3688,15 @@ export default function ChatView() {
       )}
 
       {/* WhatsApp / Instagram Status & Stories Feature Modals */}
-      <StatusCreatorModal />
+      <StatusCreatorModal
+        isOpen={isStatusCreatorOpen}
+        onClose={() => setIsStatusCreatorOpen(false)}
+      />
       <StatusViewerModal />
-      <StatusPrivacyModal />
+      <StatusPrivacyModal
+        isOpen={isStatusPrivacyOpen}
+        onClose={() => setIsStatusPrivacyOpen(false)}
+      />
     </div>
   );
 }

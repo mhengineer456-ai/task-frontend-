@@ -38,11 +38,16 @@ const FONT_STYLES = [
   { id: 'script', name: 'Casual', font: '"Comic Sans MS", "Caveat", cursive', weight: '700' }
 ];
 
-export default function StatusCreatorModal({ isOpen, onClose }) {
+export default function StatusCreatorModal({ isOpen: propIsOpen, onClose: propOnClose }) {
   const {
     publishStatus,
-    statusPrivacy = { privacyType: 'contacts' }
+    statusPrivacy = { privacyType: 'contacts' },
+    isStatusCreatorOpen,
+    setIsStatusCreatorOpen
   } = useTaskContext();
+
+  const isOpen = propIsOpen !== undefined ? propIsOpen : isStatusCreatorOpen;
+  const onClose = propOnClose || (() => setIsStatusCreatorOpen(false));
 
   const [activeTab, setActiveTab] = useState('text'); // 'text' | 'image' | 'video'
   const [textContent, setTextContent] = useState('');
