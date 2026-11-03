@@ -48,5 +48,38 @@ export const callService = {
       console.warn('callService.deleteCallLog error:', err);
       return false;
     }
+  },
+
+  // Generate AI meeting summary and action items
+  generateAiSummary: async (callId, data) => {
+    try {
+      const res = await apiClient.post(`/calls/${callId}/ai-summary`, data);
+      return res;
+    } catch (err) {
+      console.error('callService.generateAiSummary error:', err);
+      throw err;
+    }
+  },
+
+  // Retrieve existing AI summary and action items
+  getAiSummary: async (callId) => {
+    try {
+      const res = await apiClient.get(`/calls/${callId}/ai-summary`);
+      return res.call || null;
+    } catch (err) {
+      console.warn('callService.getAiSummary error:', err);
+      return null;
+    }
+  },
+
+  // Create tasks directly from AI action items
+  createTasksFromActionItems: async (callId, data) => {
+    try {
+      const res = await apiClient.post(`/calls/${callId}/create-tasks`, data);
+      return res;
+    } catch (err) {
+      console.error('callService.createTasksFromActionItems error:', err);
+      throw err;
+    }
   }
 };

@@ -12,14 +12,20 @@ import {
   Minimize2,
   ChevronDown,
   AlertCircle,
-  Volume1
+  Volume1,
+  MonitorUp,
+  MonitorOff,
+  Sparkles
 } from 'lucide-react';
 import { useCallContext } from '../../context/CallContext';
+import CallAiSummaryModal from './CallAiSummaryModal';
 
 export default function CallOverlayModal() {
   const {
     callState,
+    callId,
     callType,
+    channelId,
     remoteUser,
     isCaller,
     duration,
@@ -28,6 +34,8 @@ export default function CallOverlayModal() {
     isSpeakerOn,
     isFullscreen,
     isPiPMinimized,
+    isScreenSharing,
+    isRemoteScreenSharing,
     errorMessage,
     connectionStatus,
     localStream,
@@ -39,7 +47,8 @@ export default function CallOverlayModal() {
     toggleVideo,
     toggleSpeaker,
     toggleFullscreen,
-    togglePiPMinimized
+    togglePiPMinimized,
+    toggleScreenShare
   } = useCallContext();
 
   const remoteAudioRef = useRef(null);
@@ -48,6 +57,7 @@ export default function CallOverlayModal() {
   const modalContainerRef = useRef(null);
 
   const [audioAutoplayBlocked, setAudioAutoplayBlocked] = useState(false);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
   // Local PiP drag position
   const [pipPos, setPipPos] = useState({ x: 24, y: 24 });
@@ -308,12 +318,27 @@ export default function CallOverlayModal() {
           const isConnecting = callState === 'CONNECTING';
           const isRinging = callState === 'RINGING' || callState === 'INITIATING';
           const isFailedOrEnded = ['REJECTED', 'MISSED', 'ENDED', 'BUSY', 'FAILED'].includes(callState);
+          const showVideoStage = (isVideoCall || isScreenSharing || isRemoteScreenSharing) && isConnected;
 
           return (
             <div
               ref={modalContainerRef}
               className={`call-full-overlay ${isFullscreen ? 'call-fullscreen' : ''}`}
             >
+              {/* Screen Sharing Notification Banners */}
+              {isRemoteScreenSharing && (
+                <div className="call-screenshare-banner">
+                  <MonitorUp size={16} />
+                  <span>{remoteUser?.name || 'Participant'} is sharing their screen</span>
+                </div>
+              )}
+              {isScreenSharing && !isRemoteScreenSharing && (
+                <div className="call-screenshare-banner local">
+                  <MonitorUp size={16} />
+                  <span>You are sharing your screen</span>
+                </div>
+              )}
+
               {/* Top Header Bar */}
               <div className="call-top-bar">
                 <div className="call-top-left">
@@ -347,7 +372,7 @@ export default function CallOverlayModal() {
                       <ChevronDown size={18} />
                     </button>
                   )}
-                  {isVideoCall && (
+                  {showVideoStage && (
                     <button
                       type="button"
                       onClick={toggleFullscreen}
@@ -362,19 +387,20 @@ export default function CallOverlayModal() {
 
               {/* Main View Area */}
               <div className="call-main-stage">
-                {/* If Active Video Call */}
-                {isVideoCall && isConnected ? (
+                {/* Active Video / Screen Sharing Stage */}
+                {showVideoStage ? (
                   <div className="call-video-stage">
-                    {/* Remote Video Stream (Main Background, video-only to avoid echo with audio element) */}
+                    {/* Remote Video Stream (or Remote Screen Share) */}
                     <video
                       ref={remoteVideoRef}
                       autoPlay
                       playsInline
                       muted
                       className="call-remote-video"
+                      style={isRemoteScreenSharing ? { objectFit: 'contain' } : undefined}
                     />
 
-                    {/* Remote Fallback Avatar if remote camera is paused */}
+                    {/* Remote Fallback Avatar if remote camera/screen is paused or not sending */}
                     {!remoteStream && (
                       <div className="call-remote-placeholder">
                         <div className="call-large-avatar">
@@ -398,7 +424,7 @@ export default function CallOverlayModal() {
                       onMouseDown={handlePipMouseDown}
                       title="Drag to reposition preview"
                     >
-                      {isVideoOff ? (
+                      {isVideoOff && !isScreenSharing ? (
                         <div className="call-local-pip-off">
                           <VideoOff size={22} />
                           <span>Camera Off</span>
@@ -410,10 +436,11 @@ export default function CallOverlayModal() {
                           playsInline
                           muted
                           className="call-local-video"
+                          style={isScreenSharing ? { transform: 'none', objectFit: 'contain' } : undefined}
                         />
                       )}
                       <div className="call-local-pip-label">
-                        <span>You</span>
+                        <span>{isScreenSharing ? 'Your Screen' : 'You'}</span>
                         {isMuted && <MicOff size={11} color="#EF4444" />}
                       </div>
                     </div>
@@ -448,9 +475,21 @@ export default function CallOverlayModal() {
                     </p>
 
                     {isFailedOrEnded && (
-                      <div className="call-ended-notice">
-                        <AlertCircle size={16} />
-                        <span>{errorMessage || 'Call ended'}</span>
+                      <div className="call-ended-wrapper">
+                        <div className="call-ended-notice">
+                          <AlertCircle size={16} />
+                          <span>{errorMessage || 'Call ended'}</span>
+                        </div>
+                        {duration > 5 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsSummaryModalOpen(true)}
+                            className="call-ended-summary-trigger"
+                          >
+                            <Sparkles size={16} />
+                            <span>✨ Generate AI Meeting Minutes & Tasks</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -483,6 +522,19 @@ export default function CallOverlayModal() {
                   </button>
                 )}
 
+                {/* Screen Share Toggle */}
+                {isConnected && (
+                  <button
+                    type="button"
+                    onClick={toggleScreenShare}
+                    disabled={isFailedOrEnded}
+                    className={`call-dock-btn ${isScreenSharing ? 'btn-active-screenshare' : ''}`}
+                    title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen'}
+                  >
+                    {isScreenSharing ? <MonitorOff size={20} /> : <MonitorUp size={20} />}
+                  </button>
+                )}
+
                 {/* Speaker Output Toggle */}
                 <button
                   type="button"
@@ -494,6 +546,18 @@ export default function CallOverlayModal() {
                   {isSpeakerOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
                 </button>
 
+                {/* AI Meeting Summary & Notes Button */}
+                {isConnected && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSummaryModalOpen(true)}
+                    className="call-dock-btn"
+                    title="PulseBot AI Meeting Minutes & Tasks"
+                  >
+                    <Sparkles size={19} />
+                  </button>
+                )}
+
                 {/* Red End Call Button */}
                 <button
                   type="button"
@@ -504,6 +568,23 @@ export default function CallOverlayModal() {
                   <PhoneOff size={22} />
                 </button>
               </div>
+
+              {/* PulseBot AI Summary Modal */}
+              {isSummaryModalOpen && (
+                <CallAiSummaryModal
+                  isOpen={isSummaryModalOpen}
+                  onClose={() => setIsSummaryModalOpen(false)}
+                  callData={{
+                    id: callId || `call-${Date.now()}`,
+                    caller_name: isCaller ? 'You' : remoteUser?.name,
+                    receiver_name: isCaller ? remoteUser?.name : 'You',
+                    duration_seconds: duration,
+                    channel_id: channelId,
+                    call_type: callType
+                  }}
+                  currentUser={{ id: isCaller ? 'usr-1' : (remoteUser?.id || 'usr-1') }}
+                />
+              )}
             </div>
           );
         })()

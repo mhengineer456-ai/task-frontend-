@@ -40,6 +40,8 @@ export const CallProvider = ({ children, activeUser }) => {
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiPMinimized, setIsPiPMinimized] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isRemoteScreenSharing, setIsRemoteScreenSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('new');
 
@@ -55,6 +57,7 @@ export const CallProvider = ({ children, activeUser }) => {
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
+  const screenStreamRef = useRef(null);
   const iceServersRef = useRef(DEFAULT_ICE_SERVERS);
   const pendingIceCandidatesRef = useRef([]);
   const activeSoundRef = useRef(null);
@@ -109,6 +112,16 @@ export const CallProvider = ({ children, activeUser }) => {
       });
       localStreamRef.current = null;
     }
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {}
+      });
+      screenStreamRef.current = null;
+    }
+    setIsScreenSharing(false);
+    setIsRemoteScreenSharing(false);
     setLocalStream(null);
 
     if (remoteStreamRef.current) {
@@ -607,6 +620,120 @@ export const CallProvider = ({ children, activeUser }) => {
     setIsPiPMinimized((prev) => !prev);
   }, []);
 
+  /**
+   * Stop Screen Sharing
+   */
+  const stopScreenShare = useCallback(async () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((t) => {
+        try { t.stop(); } catch (e) {}
+      });
+      screenStreamRef.current = null;
+    }
+
+    setIsScreenSharing(false);
+
+    const pc = peerConnectionRef.current;
+    if (pc) {
+      const senders = pc.getSenders();
+      const videoSender = senders.find((s) => s.track && s.track.kind === 'video');
+      const cameraTrack = localStreamRef.current ? localStreamRef.current.getVideoTracks()[0] : null;
+
+      if (videoSender) {
+        if (cameraTrack && !isVideoOff) {
+          await videoSender.replaceTrack(cameraTrack).catch(() => {});
+        } else {
+          await videoSender.replaceTrack(null).catch(() => {});
+        }
+      }
+    }
+
+    const socket = getSocket();
+    if (socket && remoteUser?.id) {
+      socket.emit('call:screenshare-toggle', {
+        callId,
+        targetUserId: String(remoteUser.id),
+        isSharing: false
+      });
+    }
+  }, [callId, isVideoOff, remoteUser?.id]);
+
+  /**
+   * Start Screen Sharing via getDisplayMedia
+   */
+  const startScreenShare = useCallback(async () => {
+    if (!peerConnectionRef.current || callState !== 'CONNECTED') return;
+
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: 'always',
+          displaySurface: 'monitor'
+        },
+        audio: false
+      });
+
+      screenStreamRef.current = screenStream;
+      const screenTrack = screenStream.getVideoTracks()[0];
+      if (!screenTrack) return;
+
+      // Handle user stopping screen share from browser's floating toolbar ("Stop sharing")
+      screenTrack.onended = () => {
+        console.log('🖥️ [ScreenShare] Screen track ended via browser toolbar');
+        stopScreenShare();
+      };
+
+      const pc = peerConnectionRef.current;
+      const senders = pc.getSenders();
+      const videoSender = senders.find((s) => s.track && s.track.kind === 'video');
+
+      if (videoSender) {
+        await videoSender.replaceTrack(screenTrack);
+      } else {
+        pc.addTrack(screenTrack, screenStream);
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true
+        });
+        await pc.setLocalDescription(offer);
+        const socket = getSocket();
+        if (socket && remoteUser?.id) {
+          socket.emit('call:offer', {
+            callId,
+            targetUserId: String(remoteUser.id),
+            offer
+          });
+        }
+      }
+
+      setIsScreenSharing(true);
+
+      const socket = getSocket();
+      if (socket && remoteUser?.id) {
+        socket.emit('call:screenshare-toggle', {
+          callId,
+          targetUserId: String(remoteUser.id),
+          isSharing: true
+        });
+      }
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') {
+        console.warn('Screen sharing error:', err);
+      }
+    }
+  }, [callId, callState, remoteUser?.id, stopScreenShare]);
+
+  /**
+   * Toggle Screen Sharing
+   */
+  const toggleScreenShare = useCallback(() => {
+    if (isScreenSharing) {
+      stopScreenShare();
+    } else {
+      startScreenShare();
+    }
+  }, [isScreenSharing, startScreenShare, stopScreenShare]);
+
   // ====================================================================
   // Socket.IO Signalling Event Listeners
   // ====================================================================
@@ -798,6 +925,12 @@ export const CallProvider = ({ children, activeUser }) => {
       setTimeout(resetCallState, 3500);
     };
 
+    // 11. Remote Screen Share Toggle
+    const handleRemoteScreenShare = (payload) => {
+      console.log('🖥️ [Socket] Remote screen share toggle:', payload.isSharing);
+      setIsRemoteScreenSharing(Boolean(payload.isSharing));
+    };
+
     socket.on('call:incoming', handleIncomingCall);
     socket.on('call:ringing', handleCallRinging);
     socket.on('call:accept', handleCallAccept);
@@ -805,6 +938,7 @@ export const CallProvider = ({ children, activeUser }) => {
     socket.on('call:offer', handleCallOffer);
     socket.on('call:answer', handleCallAnswer);
     socket.on('call:ice-candidate', handleCallIceCandidate);
+    socket.on('call:screenshare-toggle', handleRemoteScreenShare);
     socket.on('call:end', handleCallEnd);
     socket.on('call:missed', handleCallMissed);
     socket.on('call:busy', handleCallBusy);
@@ -817,6 +951,7 @@ export const CallProvider = ({ children, activeUser }) => {
       socket.off('call:offer', handleCallOffer);
       socket.off('call:answer', handleCallAnswer);
       socket.off('call:ice-candidate', handleCallIceCandidate);
+      socket.off('call:screenshare-toggle', handleRemoteScreenShare);
       socket.off('call:end', handleCallEnd);
       socket.off('call:missed', handleCallMissed);
       socket.off('call:busy', handleCallBusy);
@@ -862,6 +997,8 @@ export const CallProvider = ({ children, activeUser }) => {
         isSpeakerOn,
         isFullscreen,
         isPiPMinimized,
+        isScreenSharing,
+        isRemoteScreenSharing,
         errorMessage,
         connectionStatus,
         localStream,
@@ -877,6 +1014,9 @@ export const CallProvider = ({ children, activeUser }) => {
         toggleSpeaker,
         toggleFullscreen,
         togglePiPMinimized,
+        toggleScreenShare,
+        startScreenShare,
+        stopScreenShare,
         fetchCallHistory
       }}
     >

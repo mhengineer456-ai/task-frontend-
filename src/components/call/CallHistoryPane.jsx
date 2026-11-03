@@ -8,16 +8,19 @@ import {
   Trash2,
   Search,
   Clock,
-  User
+  User,
+  Sparkles
 } from 'lucide-react';
 import { useCallContext } from '../../context/CallContext';
 import { useTaskContext } from '../../context/TaskContext';
+import CallAiSummaryModal from './CallAiSummaryModal';
 
 export default function CallHistoryPane() {
   const { callHistory, isHistoryLoading, startCall, fetchCallHistory } = useCallContext();
   const { activeUser, users = [], startDirectChat } = useTaskContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'missed'
+  const [selectedSummaryCall, setSelectedSummaryCall] = useState(null);
 
   // Format timestamp nicely
   const formatCallDate = (isoStr) => {
@@ -194,6 +197,16 @@ export default function CallHistoryPane() {
 
                 {/* Quick Call Back Actions */}
                 <div className="call-log-actions">
+                  {/* AI Meeting Summary Button */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSummaryCall(log)}
+                    className={`call-log-action-btn ai-summary ${log.summary ? 'has-summary' : ''}`}
+                    title={log.summary ? 'View AI Meeting Minutes & Tasks' : 'Generate PulseBot AI Summary'}
+                  >
+                    <Sparkles size={14} />
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleCallBack(log, 'voice')}
@@ -217,6 +230,19 @@ export default function CallHistoryPane() {
           })
         )}
       </div>
+
+      {/* AI Meeting Summary & Task Generator Modal */}
+      {selectedSummaryCall && (
+        <CallAiSummaryModal
+          isOpen={Boolean(selectedSummaryCall)}
+          onClose={() => setSelectedSummaryCall(null)}
+          callData={selectedSummaryCall}
+          currentUser={activeUser}
+          onTasksCreated={() => {
+            if (typeof fetchCallHistory === 'function') fetchCallHistory();
+          }}
+        />
+      )}
     </div>
   );
 }
