@@ -2473,7 +2473,7 @@ export default function ChatFloatingWidget() {
                     </button>
 
                     {/* Send */}
-                    <button type="submit" className="btn btn-primary" style={{ padding: '0.45rem 0.75rem' }}>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '0.45rem 0.75rem', background: '#25D366', borderColor: '#25D366', color: '#ffffff' }}>
                       <Send style={{ width: '14px', height: '14px' }} />
                     </button>
                   </div>
@@ -2491,12 +2491,12 @@ export default function ChatFloatingWidget() {
           width: '56px',
           height: '56px',
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+          background: 'linear-gradient(135deg, #25D366 0%, #00A884 100%)',
           color: '#ffffff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 8px 24px rgba(2, 132, 199, 0.4)',
+          boxShadow: '0 8px 24px rgba(37, 211, 102, 0.45)',
           border: '2px solid #ffffff',
           cursor: 'pointer',
           position: 'relative',

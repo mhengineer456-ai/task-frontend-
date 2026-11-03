@@ -1872,6 +1872,9 @@ export const TaskProvider = ({ children }) => {
       .catch(err => console.warn('Direct channel API sync warning:', err));
 
     setActiveChannelId(channelId);
+    if (typeof setActiveView === 'function') {
+      setActiveView('chat');
+    }
   };
 
   const createGroupChat = async ({ name, description = '', memberIds = [] }) => {
@@ -2015,7 +2018,7 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
-  const sendStatusReply = async (statusId, text) => {
+  const sendStatusReply = async (statusId, text, contactUser = null) => {
     if (!statusId || !text || !activeUser?.id) return;
     try {
       const res = await statusService.replyToStatus(statusId, {
@@ -2026,10 +2029,42 @@ export const TaskProvider = ({ children }) => {
         text
       });
       if (res && res.success) {
+        if (res.channelId && res.message) {
+          setChatMessages(prev => {
+            const list = prev[res.channelId] || [];
+            if (list.some(m => m.id === res.message.id)) return prev;
+            return {
+              ...prev,
+              [res.channelId]: [...list, res.message]
+            };
+          });
+
+          const target = contactUser || res.targetUser;
+          if (target && target.id) {
+            setChatChannels(prev => {
+              if (prev.some(c => c.id === res.channelId)) return prev;
+              const newDmChannel = {
+                id: res.channelId,
+                name: target.name || 'Contact',
+                type: 'direct',
+                roleBadge: `${target.role || 'Team Member'} • ${target.department || 'Team'}`,
+                avatar: target.avatar || '',
+                participantIds: [activeUser.id, target.id],
+                isPrivate: true,
+                targetUser: target,
+                unreadCount: 0,
+                last_message_at: new Date().toISOString()
+              };
+              return [newDmChannel, ...prev];
+            });
+          }
+        }
+
         triggerRealtimeToast({
           title: 'Reply Sent',
-          message: 'Your reply was delivered as a direct message.',
-          type: 'chat'
+          message: `Your reply was delivered to ${contactUser?.name || 'chat'}.`,
+          type: 'chat',
+          channelId: res.channelId
         });
         return res;
       }

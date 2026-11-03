@@ -14,12 +14,15 @@ import {
   Shield,
   Clock,
   Sparkles,
-  Share2
+  Share2,
+  MessageSquare,
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { useTasks } from '../../context/TaskContext';
 import StatusViewerBottomSheet from './StatusViewerBottomSheet';
 
-const QUICK_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '👏'];
+const QUICK_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '👏', '🙏', '👍'];
 
 export default function StatusViewerModal() {
   const {
@@ -29,7 +32,9 @@ export default function StatusViewerModal() {
     activeUser,
     viewStatus,
     removeStatus,
-    sendStatusReply
+    sendStatusReply,
+    startDirectChat,
+    setActiveView
   } = useTasks();
 
   const [groupIndex, setGroupIndex] = useState(0);
@@ -230,6 +235,10 @@ export default function StatusViewerModal() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!activeStatusStory) return;
+      // Do not intercept keystrokes if the user is typing inside the reply input
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        return;
+      }
       if (e.key === 'Escape') {
         if (isViewerListOpen) setIsViewerListOpen(false);
         else closeStatusStory();
@@ -277,7 +286,7 @@ export default function StatusViewerModal() {
   // Tap navigation zones (left 35% prev, right 65% next)
   const handleScreenClick = (e) => {
     // Prevent if clicked on interactive controls
-    if (e.target.closest('button, input, textarea, .status-interactive-zone')) return;
+    if (e.target.closest('button, input, textarea, .status-interactive-zone, .status-reply-feedback-toast')) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -297,10 +306,14 @@ export default function StatusViewerModal() {
 
     setIsSendingReply(true);
     try {
-      await sendStatusReply(currentStatus.id, replyText.trim());
+      const res = await sendStatusReply(currentStatus.id, replyText.trim(), groupUser);
       setReplyText('');
-      setReplyFeedback('Reply sent to direct chat! 💬');
-      setTimeout(() => setReplyFeedback(null), 2500);
+      setReplyFeedback({
+        text: `Reply sent to ${groupUser?.name || 'chat'}`,
+        contactUser: groupUser,
+        channelId: res?.channelId
+      });
+      setTimeout(() => setReplyFeedback(null), 4000);
     } catch (err) {
       console.error('Error replying to status:', err);
     } finally {
@@ -311,12 +324,26 @@ export default function StatusViewerModal() {
 
   const handleSendQuickReaction = async (emoji) => {
     try {
-      await sendStatusReply(currentStatus.id, emoji);
-      setReplyFeedback(`Reacted with ${emoji}`);
-      setTimeout(() => setReplyFeedback(null), 2000);
+      const res = await sendStatusReply(currentStatus.id, emoji, groupUser);
+      setReplyFeedback({
+        text: `Reacted with ${emoji} to ${groupUser?.name || 'status'}`,
+        contactUser: groupUser,
+        channelId: res?.channelId
+      });
+      setTimeout(() => setReplyFeedback(null), 3500);
     } catch (err) {
       console.error('Error sending quick reaction:', err);
     }
+  };
+
+  const handleOpenChat = (targetUser) => {
+    if (targetUser) {
+      startDirectChat(targetUser);
+    }
+    if (typeof setActiveView === 'function') {
+      setActiveView('chat');
+    }
+    closeStatusStory();
   };
 
   const handleDeleteCurrentStatus = async () => {
@@ -700,16 +727,21 @@ export default function StatusViewerModal() {
                 onSubmit={handleSendTextReply}
                 onClick={(e) => e.stopPropagation()}
               >
-                <input
-                  type="text"
-                  placeholder={`Reply to ${currentGroup?.user?.name || 'status'}...`}
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onFocus={() => setIsPaused(true)}
-                  onBlur={() => setIsPaused(false)}
-                  className="status-reply-input"
-                  maxLength={500}
-                />
+                <div className="status-reply-input-wrapper">
+                  <Smile size={18} className="status-reply-smile-icon" />
+                  <input
+                    type="text"
+                    placeholder={`Reply to ${groupUser?.name || 'status'}...`}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onFocus={() => setIsPaused(true)}
+                    onBlur={() => {
+                      if (!replyText) setIsPaused(false);
+                    }}
+                    className="status-reply-input"
+                    maxLength={500}
+                  />
+                </div>
                 <button
                   type="submit"
                   disabled={!replyText.trim() || isSendingReply}
@@ -723,10 +755,27 @@ export default function StatusViewerModal() {
           )}
         </div>
 
-        {/* Reply Sent Toast Feedback */}
+        {/* Reply Sent Toast Feedback with Open Chat Action */}
         {replyFeedback && (
-          <div className="status-reply-feedback-toast">
-            {replyFeedback}
+          <div
+            className="status-reply-feedback-toast"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="status-reply-toast-left">
+              <span className="status-reply-toast-check">✓</span>
+              <span className="status-reply-toast-msg">{replyFeedback.text}</span>
+            </div>
+            {replyFeedback.contactUser && (
+              <button
+                type="button"
+                className="status-reply-open-chat-btn"
+                onClick={() => handleOpenChat(replyFeedback.contactUser)}
+                title={`Open chat with ${replyFeedback.contactUser.name || 'contact'}`}
+              >
+                <span>Open Chat</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -2620,6 +2620,107 @@ export default function ChatView() {
                           );
                         }
 
+                        // 4c. WhatsApp-style Quoted Status Reply Card
+                        const statusReply = msg.statusReply ||
+                          (typeof msg.fileAttachment === 'object' && msg.fileAttachment?.statusReply) ||
+                          (typeof msg.file_attachment === 'object' && msg.file_attachment?.statusReply);
+
+                        if (statusReply || msg.messageType === 'status_reply' || msg.message_type === 'status_reply') {
+                          let actualReplyText = statusReply?.replyText || '';
+                          if (!actualReplyText && msg.text) {
+                            if (msg.text.includes('\n\n')) {
+                              actualReplyText = msg.text.split('\n\n').slice(1).join('\n\n');
+                            } else {
+                              actualReplyText = msg.text;
+                            }
+                          }
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                              {/* Quoted Status Box */}
+                              <div
+                                style={{
+                                  padding: '8px 12px',
+                                  borderRadius: '10px',
+                                  background: isSelf ? 'rgba(0, 0, 0, 0.15)' : 'rgba(37, 211, 102, 0.08)',
+                                  borderLeft: '4px solid #25D366',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  fontSize: '0.8rem',
+                                  backdropFilter: 'blur(4px)',
+                                  userSelect: 'none'
+                                }}
+                              >
+                                {statusReply?.mediaUrl ? (
+                                  <img
+                                    src={statusReply.mediaUrl}
+                                    alt="Status Preview"
+                                    style={{
+                                      width: '42px',
+                                      height: '42px',
+                                      borderRadius: '8px',
+                                      objectFit: 'cover',
+                                      flexShrink: 0
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: '36px',
+                                      height: '36px',
+                                      borderRadius: '8px',
+                                      background: statusReply?.backgroundColor || 'linear-gradient(135deg, #007AFF, #5856D6)',
+                                      color: statusReply?.textColor || '#FFFFFF',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 800,
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    Aa
+                                  </div>
+                                )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, overflow: 'hidden' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span style={{ fontWeight: 800, color: '#25D366', fontSize: '0.74rem' }}>
+                                      Status
+                                    </span>
+                                    {statusReply?.ownerName && (
+                                      <span style={{ fontSize: '0.72rem', opacity: 0.75 }}>
+                                        • {statusReply.ownerName}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span
+                                    style={{
+                                      fontSize: '0.78rem',
+                                      opacity: 0.88,
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
+                                    }}
+                                  >
+                                    {statusReply?.snippet || statusReply?.content || 'Status Update'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* User's Direct Reply */}
+                              <div style={{ whiteSpace: 'normal', fontSize: '0.88rem' }}>
+                                {renderFormattedMessageText(
+                                  actualReplyText || msg.text,
+                                  isSelf,
+                                  (url) => setPreviewImage(url),
+                                  false
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
                         return msg.text ? (
                           <div style={{ whiteSpace: 'normal' }}>
                             {renderFormattedMessageText(
