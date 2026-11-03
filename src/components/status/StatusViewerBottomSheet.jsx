@@ -11,7 +11,7 @@ export default function StatusViewerBottomSheet({
 }) {
   const { fetchStatusViews, users = [] } = useTaskContext();
   const [views, setViews] = useState([]);
-  const [totalViews, setTotalViews] = useState(status?.views_count || 0);
+  const [totalViews, setTotalViews] = useState(status?.viewCount ?? status?.views_count ?? 0);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -97,7 +97,7 @@ export default function StatusViewerBottomSheet({
                 {totalViews === 0 ? 'No Views Yet' : `Viewed by ${totalViews} ${totalViews === 1 ? 'person' : 'people'}`}
               </h3>
               <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-                Posted {getTimeAgo(status.created_at)} • Expires in 24 hours
+                Posted {getTimeAgo(status.created_at || status.createdAt)} • Expires in 24 hours
               </p>
             </div>
           </div>

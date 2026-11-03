@@ -26,6 +26,7 @@ export default function StatusViewerModal() {
     activeStatusStory,
     closeStatusStory,
     currentUser,
+    activeUser,
     viewStatus,
     removeStatus,
     sendStatusReply
@@ -57,9 +58,31 @@ export default function StatusViewerModal() {
   const statuses = currentGroup?.statuses || [];
   const currentStatus = statuses[statusIndex] || null;
 
+  const currentUserId = String(activeUser?.id || currentUser?.id || '');
+  const groupUser = currentGroup?.user || {
+    id: currentGroup?.userId,
+    name: currentGroup?.userName,
+    avatar: currentGroup?.userAvatar
+  };
+
   const isOwnStory = Boolean(
-    currentGroup?.user?.id && (currentGroup.user.id === currentUser?.id || currentGroup.user.id === 'usr-me')
+    (groupUser?.id && String(groupUser.id) === currentUserId) ||
+    (currentGroup?.userId && String(currentGroup.userId) === currentUserId) ||
+    (currentStatus?.user_id && String(currentStatus.user_id) === currentUserId) ||
+    groupUser?.id === 'usr-me'
   );
+
+  // Defensively normalized status attributes
+  const statusType = currentStatus?.type || 'text';
+  const textBody = currentStatus?.content || currentStatus?.text || '';
+  const mediaUrl = currentStatus?.mediaUrl || currentStatus?.media_url || '';
+  const backgroundColor = currentStatus?.backgroundColor || currentStatus?.background_color || 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)';
+  const textColor = currentStatus?.textColor || currentStatus?.text_color || '#FFFFFF';
+  const typographyStyle = currentStatus?.typographyStyle || currentStatus?.fontStyle || currentStatus?.font_style || 'sans';
+  const caption = currentStatus?.caption || (statusType !== 'text' ? (currentStatus?.content || '') : '');
+  const createdAt = currentStatus?.createdAt || currentStatus?.created_at;
+  const expiresAt = currentStatus?.expiresAt || currentStatus?.expires_at;
+  const viewCount = currentStatus?.viewCount ?? currentStatus?.views_count ?? 0;
 
   // Initialize group and status index when modal opens
   useEffect(() => {
@@ -391,15 +414,15 @@ export default function StatusViewerModal() {
           <div className="status-user-bar">
             <div className="status-user-meta">
               <div className="status-avatar-wrapper">
-                {currentGroup?.user?.avatar ? (
+                {groupUser?.avatar ? (
                   <img
-                    src={currentGroup.user.avatar}
-                    alt={currentGroup.user.name}
+                    src={groupUser.avatar}
+                    alt={groupUser.name || 'User'}
                     className="status-viewer-avatar"
                   />
                 ) : (
                   <div className="status-viewer-avatar status-avatar-fallback">
-                    {(currentGroup?.user?.name || 'U')[0].toUpperCase()}
+                    {(groupUser?.name || 'U')[0].toUpperCase()}
                   </div>
                 )}
               </div>
@@ -407,22 +430,22 @@ export default function StatusViewerModal() {
               <div className="status-user-details">
                 <div className="status-username-row">
                   <span className="status-username">
-                    {isOwnStory ? 'My Status' : (currentGroup?.user?.name || 'Contact')}
+                    {isOwnStory ? 'My Status' : (groupUser?.name || 'Contact')}
                   </span>
-                  {currentGroup?.user?.role && (
+                  {groupUser?.role && (
                     <span className="status-user-role-badge">
-                      {currentGroup.user.role}
+                      {groupUser.role}
                     </span>
                   )}
                 </div>
                 <div className="status-time-row">
                   <Clock size={11} className="status-time-icon" />
-                  <span>{formatTimeAgo(currentStatus.createdAt)}</span>
-                  {currentStatus.expiresAt && (
+                  <span>{formatTimeAgo(createdAt)}</span>
+                  {expiresAt && (
                     <>
                       <span className="status-time-dot">•</span>
                       <span className="status-expires-badge">
-                        {calculateHoursRemaining(currentStatus.expiresAt)}
+                        {calculateHoursRemaining(expiresAt)}
                       </span>
                     </>
                   )}
@@ -527,22 +550,22 @@ export default function StatusViewerModal() {
         {/* STORY CONTENT BODY */}
         <div className="status-content-body">
           {/* A. TEXT STATUS */}
-          {currentStatus.type === 'text' && (
+          {statusType === 'text' && (
             <div
               className="status-text-slide"
               style={{
-                background: currentStatus.backgroundColor || 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)',
-                color: currentStatus.textColor || '#FFFFFF',
-                ...getTypographyStyle(currentStatus.typographyStyle)
+                background: backgroundColor,
+                color: textColor,
+                ...getTypographyStyle(typographyStyle)
               }}
             >
               <div className="status-text-slide-content">
                 <p className="status-text-slide-p">
-                  {currentStatus.text}
+                  {textBody || caption || 'Status Update'}
                 </p>
-                {currentStatus.caption && (
+                {caption && textBody !== caption && (
                   <div className="status-text-slide-caption">
-                    {currentStatus.caption}
+                    {caption}
                   </div>
                 )}
               </div>
@@ -550,41 +573,52 @@ export default function StatusViewerModal() {
           )}
 
           {/* B. PHOTO STATUS */}
-          {currentStatus.type === 'image' && (
+          {statusType === 'image' && (
             <div className="status-media-slide">
               {/* Blurred background glow */}
-              <div
-                className="status-media-blur-bg"
-                style={{ backgroundImage: `url(${currentStatus.mediaUrl})` }}
-              />
-              <img
-                src={currentStatus.mediaUrl}
-                alt={currentStatus.caption || 'Status image'}
-                className="status-media-image"
-              />
-              {currentStatus.caption && (
+              {mediaUrl && (
+                <div
+                  className="status-media-blur-bg"
+                  style={{ backgroundImage: `url(${mediaUrl})` }}
+                />
+              )}
+              {mediaUrl ? (
+                <img
+                  src={mediaUrl}
+                  alt={caption || 'Status image'}
+                  className="status-media-image"
+                />
+              ) : (
+                <div style={{ color: '#fff', textAlign: 'center', padding: '2rem' }}>
+                  <p style={{ fontSize: '1rem', fontWeight: 600 }}>Image status</p>
+                  {textBody && <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>{textBody}</p>}
+                </div>
+              )}
+              {caption && (
                 <div className="status-media-caption-badge">
-                  {currentStatus.caption}
+                  {caption}
                 </div>
               )}
             </div>
           )}
 
           {/* C. VIDEO STATUS */}
-          {currentStatus.type === 'video' && (
+          {statusType === 'video' && (
             <div className="status-media-slide">
-              <video
-                ref={videoRef}
-                src={currentStatus.mediaUrl}
-                className="status-media-video"
-                playsInline
-                autoPlay
-                muted={isMuted}
-                loop={false}
-              />
-              {currentStatus.caption && (
+              {mediaUrl && (
+                <video
+                  ref={videoRef}
+                  src={mediaUrl}
+                  className="status-media-video"
+                  playsInline
+                  autoPlay
+                  muted={isMuted}
+                  loop={false}
+                />
+              )}
+              {caption && (
                 <div className="status-media-caption-badge">
-                  {currentStatus.caption}
+                  {caption}
                 </div>
               )}
             </div>
@@ -632,8 +666,8 @@ export default function StatusViewerModal() {
               >
                 <Eye size={17} className="status-view-eye-icon" />
                 <span className="status-view-count-text">
-                  {currentStatus.viewCount > 0
-                    ? `Viewed by ${currentStatus.viewCount} ${currentStatus.viewCount === 1 ? 'person' : 'people'}`
+                  {viewCount > 0
+                    ? `Viewed by ${viewCount} ${viewCount === 1 ? 'person' : 'people'}`
                     : 'No views yet'}
                 </span>
                 <span className="status-view-count-cue">Tap for details</span>

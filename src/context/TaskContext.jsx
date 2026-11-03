@@ -399,6 +399,54 @@ export const TaskProvider = ({ children }) => {
   const [isStatusPrivacyOpen, setIsStatusPrivacyOpen] = useState(false);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
 
+  const normalizeStatusItem = (s) => {
+    if (!s) return null;
+    return {
+      ...s,
+      content: s.content || s.text || '',
+      text: s.content || s.text || '',
+      caption: s.caption || (s.type !== 'text' ? (s.content || '') : ''),
+      mediaUrl: s.mediaUrl || s.media_url || null,
+      media_url: s.media_url || s.mediaUrl || null,
+      backgroundColor: s.backgroundColor || s.background_color || '#007AFF',
+      background_color: s.background_color || s.backgroundColor || '#007AFF',
+      textColor: s.textColor || s.text_color || '#FFFFFF',
+      text_color: s.text_color || s.textColor || '#FFFFFF',
+      typographyStyle: s.typographyStyle || s.fontStyle || s.font_style || 'sans',
+      fontStyle: s.fontStyle || s.typographyStyle || s.font_style || 'sans',
+      font_style: s.font_style || s.fontStyle || 'sans',
+      createdAt: s.createdAt || s.created_at,
+      created_at: s.created_at || s.createdAt,
+      expiresAt: s.expiresAt || s.expires_at,
+      expires_at: s.expires_at || s.expiresAt,
+      viewCount: s.viewCount ?? s.viewsCount ?? s.views_count ?? 0,
+      views_count: s.views_count ?? s.viewCount ?? 0,
+      hasViewed: Boolean(s.hasViewed ?? s.has_viewed),
+      has_viewed: Boolean(s.has_viewed ?? s.hasViewed)
+    };
+  };
+
+  const normalizeStatusGroup = (g) => {
+    if (!g) return null;
+    const u = g.user || {
+      id: g.userId,
+      name: g.userName,
+      avatar: g.userAvatar
+    };
+    return {
+      ...g,
+      user: u,
+      userId: g.userId || u.id,
+      userName: g.userName || u.name,
+      userAvatar: g.userAvatar || u.avatar,
+      statuses: (g.statuses || []).map(normalizeStatusItem).filter(Boolean),
+      latestAt: g.latestAt || g.lastUpdated,
+      lastUpdated: g.lastUpdated || g.latestAt,
+      hasUnread: Boolean(g.hasUnread ?? g.hasUnviewed),
+      unreadCount: g.unreadCount || 0
+    };
+  };
+
   const loadStatusFeed = async (uid = activeUserId) => {
     if (!uid) return;
     setIsLoadingStatuses(true);
@@ -406,9 +454,9 @@ export const TaskProvider = ({ children }) => {
       const data = await statusService.getStatusFeed(uid);
       if (data && data.success) {
         const feed = {
-          myStatus: data.myStatus || null,
-          recentUpdates: data.recentUpdates || [],
-          viewedUpdates: data.viewedUpdates || []
+          myStatus: normalizeStatusGroup(data.myStatus),
+          recentUpdates: (data.recentUpdates || []).map(normalizeStatusGroup).filter(Boolean),
+          viewedUpdates: (data.viewedUpdates || []).map(normalizeStatusGroup).filter(Boolean)
         };
         setStatusFeed(feed);
         safeSetLocalStorage('taskpulse_status_feed', feed);
@@ -2188,6 +2236,7 @@ export const TaskProvider = ({ children }) => {
         taskCategories,
         customFields,
         activeUser,
+        currentUser: activeUser,
         activeUserId,
         setActiveUserId,
         updateUserKraAndKpi,
