@@ -31,6 +31,8 @@ import RealtimeToastContainer from './components/common/RealtimeToastContainer';
 import MobileBottomNav from './components/common/MobileBottomNav';
 import { Monitor } from 'lucide-react';
 import { useMobileBackNavigation } from './hooks/useMobileBackNavigation';
+import { CallProvider } from './context/CallContext';
+import CallOverlayModal from './components/call/CallOverlayModal';
 
 function MainLayout() {
   const {
@@ -197,13 +199,18 @@ function MainLayout() {
 }
 
 function AppContent() {
-  const { isAuthenticated } = useTaskContext();
+  const { isAuthenticated, activeUser } = useTaskContext();
 
   if (!isAuthenticated) {
     return <AuthPage />;
   }
 
-  return <MainLayout />;
+  return (
+    <CallProvider activeUser={activeUser}>
+      <MainLayout />
+      <CallOverlayModal />
+    </CallProvider>
+  );
 }
 
 export default function App() {

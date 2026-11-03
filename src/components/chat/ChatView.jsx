@@ -58,6 +58,8 @@ import StatusListPane from '../status/StatusListPane';
 import StatusCreatorModal from '../status/StatusCreatorModal';
 import StatusViewerModal from '../status/StatusViewerModal';
 import StatusPrivacyModal from '../status/StatusPrivacyModal';
+import { useCallContext } from '../../context/CallContext';
+import CallHistoryPane from '../call/CallHistoryPane';
 
 const POPULAR_EMOJIS = [
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
@@ -1147,12 +1149,15 @@ export default function ChatView() {
   const [requireEaFollowup, setRequireEaFollowup] = useState(false);
   const [mobileActivePane, setMobileActivePane] = useState('roster');
 
-  const handleStartCall = (type, targetName) => {
-    setCallNotification({
-      type,
-      name: targetName || 'Team Member'
-    });
-    setTimeout(() => setCallNotification(null), 3500);
+  const { startCall } = useCallContext();
+
+  const handleStartCall = (type, targetContact) => {
+    const contact = targetContact || directContact;
+    if (!contact || !contact.id) {
+      console.warn('Target contact not found for call.');
+      return;
+    }
+    startCall(contact, type, activeChannel?.id);
   };
 
   const handleCopyMessage = (msgId, text) => {
@@ -1682,10 +1687,21 @@ export default function ChatView() {
               <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#25D366', marginRight: '4px' }} />
               Status
             </button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab('calls')}
+              className={`apple-segmented-tab ${sidebarTab === 'calls' ? 'active' : ''}`}
+              title="Calls and history"
+            >
+              <Phone style={{ width: '11px', height: '11px', marginRight: '4px', verticalAlign: 'middle' }} />
+              Calls
+            </button>
           </div>
         </div>
 
-        {sidebarTab === 'status' ? (
+        {sidebarTab === 'calls' ? (
+          <CallHistoryPane />
+        ) : sidebarTab === 'status' ? (
           <StatusListPane />
         ) : (
           <>
@@ -2060,7 +2076,7 @@ export default function ChatView() {
               <>
                 <button
                   type="button"
-                  onClick={() => handleStartCall('voice', chatDisplayName)}
+                  onClick={() => handleStartCall('voice', directContact)}
                   style={{
                     padding: '7px',
                     borderRadius: '50%',
@@ -2080,7 +2096,7 @@ export default function ChatView() {
 
                 <button
                   type="button"
-                  onClick={() => handleStartCall('video', chatDisplayName)}
+                  onClick={() => handleStartCall('video', directContact)}
                   style={{
                     padding: '7px',
                     borderRadius: '50%',
@@ -2093,7 +2109,7 @@ export default function ChatView() {
                     justifyContent: 'center',
                     transition: 'all 0.15s ease'
                   }}
-                  title={`FaceTime / Video Call with ${chatDisplayName}`}
+                  title={`Video Call with ${chatDisplayName}`}
                 >
                   <Video style={{ width: '15px', height: '15px' }} />
                 </button>
@@ -2343,6 +2359,64 @@ export default function ChatView() {
                       boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}>
                       {msg.text}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (msg.messageType === 'call_activity') {
+                const isVoice = (msg.text || '').toLowerCase().includes('voice') || (msg.text || '').includes('📞');
+                const isMissed = (msg.text || '').toLowerCase().includes('missed') || (msg.text || '').toLowerCase().includes('declined') || (msg.text || '').toLowerCase().includes('busy');
+                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                return (
+                  <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '0.6rem 0', width: '100%' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '9px',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '24px',
+                      padding: '6px 16px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: isMissed ? '#EF4444' : 'var(--text-primary)',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      <div style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        background: isMissed ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                        color: isMissed ? '#EF4444' : '#10B981',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {isVoice ? <Phone size={13} /> : <Video size={13} />}
+                      </div>
+                      <span>{msg.text}</span>
+                      {timeStr && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{timeStr}</span>}
+                      {isDirectChat && directContact && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartCall(isVoice ? 'voice' : 'video', directContact)}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: 'var(--brand-primary)',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            padding: '2px 4px',
+                            marginLeft: '4px',
+                            textDecoration: 'underline'
+                          }}
+                        >
+                          Call back
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
