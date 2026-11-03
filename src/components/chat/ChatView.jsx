@@ -1390,6 +1390,7 @@ export default function ChatView() {
       className="chat-outer-wrapper"
       style={{
         display: 'flex',
+        flexDirection: 'column',
         height: '100%',
         maxHeight: '100%',
         width: '100%',
@@ -1400,7 +1401,18 @@ export default function ChatView() {
         overflow: 'hidden'
       }}
     >
-      <div className="chat-main-container">
+      <div
+        className="chat-main-container"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          minHeight: 0,
+          flex: 1,
+          overflow: 'hidden'
+        }}
+      >
         {/* Sidebar Channels & Team Members Roster */}
         <div
           className={`glass-panel chat-roster-pane ${mobileActivePane === 'chat' ? 'chat-pane-hidden-mobile' : ''}`}
@@ -1711,9 +1723,15 @@ export default function ChatView() {
       <div
         className={`chat-conversation-pane ${mobileActivePane === 'roster' ? 'chat-pane-hidden-mobile' : ''}`}
         style={{
-          background: 'var(--bg-main)',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          minHeight: 0,
+          flex: 1,
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          background: 'var(--bg-main)'
         }}
       >
         {/* WhatsApp-Style Active Chat Header */}
@@ -1729,17 +1747,24 @@ export default function ChatView() {
             flexShrink: 0,
             flexWrap: 'nowrap',
             width: '100%',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            height: '58px'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1, overflow: 'hidden' }}>
-            {/* Mobile Back Button to return to Roster */}
+            {/* Mobile Back Button: return to roster or dashboard */}
             <button
               type="button"
-              onClick={() => setMobileActivePane('roster')}
+              onClick={() => {
+                if (mobileActivePane === 'chat') {
+                  setMobileActivePane('roster');
+                } else {
+                  setActiveView('dashboard');
+                }
+              }}
               className="chat-mobile-back-btn"
-              title="Back to contacts list"
-              aria-label="Back to contacts list"
+              title="Back"
+              aria-label="Back"
             >
               <ArrowLeft style={{ width: '18px', height: '18px' }} />
             </button>
@@ -1978,7 +2003,7 @@ export default function ChatView() {
         <div
           ref={messagesContainerRef}
           onScroll={handleScroll}
-          className="chat-messages-feed"
+          className="chat-messages-feed whatsapp-chat-feed"
           style={{
             flex: 1,
             minHeight: 0,
@@ -1987,10 +2012,8 @@ export default function ChatView() {
             WebkitOverflowScrolling: 'touch',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1.1rem',
-            background: 'var(--bg-main)',
-            backgroundImage: 'radial-gradient(rgba(2, 132, 199, 0.04) 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
+            gap: '0.65rem',
+            padding: '0.85rem 0.75rem',
             scrollBehavior: 'smooth'
           }}
         >
@@ -2186,16 +2209,11 @@ export default function ChatView() {
 
                     {/* WhatsApp Message Bubble */}
                     <div
-                      className="chat-msg-bubble"
+                      className={`chat-msg-bubble ${isSelf ? 'whatsapp-bubble-outgoing' : 'whatsapp-bubble-incoming'}`}
                       style={{
-                        padding: '0.8rem 1.1rem',
-                        borderRadius: isSelf ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                        background: isSelf ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : isAi ? '#ffffff' : 'var(--bg-card)',
-                        color: isSelf ? '#ffffff' : 'var(--text-primary)',
-                        border: isSelf ? 'none' : '1px solid var(--border-color)',
-                        boxShadow: 'var(--shadow-sm)',
+                        padding: '0.65rem 0.95rem',
                         fontSize: '0.875rem',
-                        lineHeight: '1.5',
+                        lineHeight: '1.45',
                         position: 'relative',
                         width: hasTracking ? '100%' : 'auto',
                         maxWidth: '100%',
@@ -2484,12 +2502,15 @@ export default function ChatView() {
                         </div>
                       )}
 
-                      {/* WhatsApp Double Checkmark & Status on bottom right */}
-                      {isSelf && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                          <CheckCheck style={{ width: '15px', height: '15px', color: '#bae6fd' }} title="Read by recipient" />
-                        </div>
-                      )}
+                      {/* WhatsApp Timestamp & Read Receipts */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', marginTop: '3px', opacity: 0.85 }}>
+                        <span style={{ fontSize: '0.65rem', color: isSelf ? '#166534' : '#64748b' }}>
+                          {getTimeAgo(msg.timestamp)}
+                        </span>
+                        {isSelf && (
+                          <CheckCheck style={{ width: '14px', height: '14px', color: '#53bdeb' }} title="Read" />
+                        )}
+                      </div>
                     </div>
 
                     {/* WhatsApp Reaction Badges attached to bubble */}
@@ -2608,7 +2629,7 @@ export default function ChatView() {
         )}
 
         {/* WhatsApp-Style Input Controls */}
-        <div style={{ position: 'relative', borderTop: '1px solid var(--border-color)', background: 'var(--bg-sidebar)', flexShrink: 0 }}>
+        <div className="whatsapp-input-dock">
           {/* Emoji Picker Popover */}
           {showEmojiPicker && (
             <div
@@ -2776,7 +2797,7 @@ export default function ChatView() {
             style={{ display: 'none' }}
           />
 
-          <form onSubmit={handleSend} className="chat-input-form" style={{ padding: '0.85rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', position: 'relative' }}>
+          <form onSubmit={handleSend} className="chat-input-form" style={{ padding: '0', display: 'flex', flexDirection: 'column', gap: '0.45rem', position: 'relative', margin: 0 }}>
             {/* Executive Tagged User & EA Follow-up Bar */}
             {taggedUser && (
               <div
@@ -2941,25 +2962,27 @@ export default function ChatView() {
               </div>
             )}
 
-            {/* Main Bar: Voice Recording Active Mode OR Normal Text Mode */}
+            {/* Main Bar: Voice Recording Active Mode OR WhatsApp Capsule Text Mode */}
             {isRecording ? (
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '1rem',
-                  padding: '0.5rem 1rem',
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '12px'
+                  gap: '0.75rem',
+                  padding: '6px 14px',
+                  background: '#ffffff',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '26px',
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.15)'
                 }}
               >
                 {/* Blinking red mic dot and timer */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1 }}>
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} />
-                  <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#dc2626' }}>
-                    Recording Voice Note... {formattedTime}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#dc2626', fontFamily: 'monospace' }}>
+                    {formattedTime}
                   </span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Recording audio...</span>
                 </div>
 
                 {/* Cancel / Trash Button */}
@@ -2967,8 +2990,8 @@ export default function ChatView() {
                   type="button"
                   onClick={cancelRecording}
                   style={{
-                    background: '#ffffff',
-                    border: '1px solid #fca5a5',
+                    background: '#fee2e2',
+                    border: 'none',
                     color: '#dc2626',
                     padding: '8px',
                     borderRadius: '50%',
@@ -2986,277 +3009,90 @@ export default function ChatView() {
                 <button
                   type="button"
                   onClick={handleSendVoiceNote}
-                  className="btn btn-primary"
-                  style={{
-                    padding: '0.65rem 1.25rem',
-                    background: '#10b981',
-                    borderColor: '#059669',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
+                  className="whatsapp-circle-action-btn"
+                  style={{ width: '38px', height: '38px', minWidth: '38px' }}
                   title="Send Voice Note"
                 >
-                  <Send style={{ width: '16px', height: '16px' }} />
-                  <span>Send Audio</span>
+                  <Send style={{ width: '16px', height: '16px', color: '#ffffff', marginLeft: '2px' }} />
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
-                {/* Emoji Picker Toggle Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="btn-icon"
-                  style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7' }}
-                  title="Insert WhatsApp Emoji"
-                >
-                  <Smile style={{ width: '18px', height: '18px' }} />
-                </button>
-
-                {/* WhatsApp Paperclip Menu Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  className="btn-icon"
-                  style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7' }}
-                  title="Attach Photo, Document, or Audio"
-                >
-                  <Paperclip style={{ width: '18px', height: '18px' }} />
-                </button>
-
-                {/* Tag User / Assign Task Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTagMenu(!showTagMenu);
-                    setShowEmojiPicker(false);
-                    setShowAttachMenu(false);
-                  }}
-                  style={{
-                    background: taggedUser ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#f8fafc',
-                    border: taggedUser ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                    color: taggedUser ? '#ffffff' : '#334155',
-                    padding: '7px 10px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    transition: 'all 0.15s ease',
-                    boxShadow: taggedUser ? '0 2px 6px rgba(2, 132, 199, 0.25)' : 'none',
-                    flexShrink: 0
-                  }}
-                  title="Tag team member to assign task & transmit in real time"
-                >
-                  <AtSign style={{ width: '15px', height: '15px' }} />
-                  <span className="header-label-tablet">{taggedUser ? `Assigned: ${taggedUser.name.split(' ')[0]}` : 'Tag Person'}</span>
-                </button>
-
-                {/* Tag User Executive Command Popover */}
-                {showTagMenu && (
-                  <div
-                    ref={tagMenuRef}
-                    style={{
-                      position: 'absolute',
-                      bottom: '68px',
-                      left: '80px',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '14px',
-                      padding: '12px',
-                      boxShadow: '0 20px 40px -10px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                      zIndex: 1001,
-                      width: '340px',
-                      maxHeight: '300px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                      animation: 'fadeIn 0.15s ease'
-                    }}
+              <div className="whatsapp-input-row">
+                {/* WhatsApp Capsule Container */}
+                <div className="whatsapp-input-capsule">
+                  {/* Emoji Picker Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="whatsapp-icon-btn"
+                    title="Insert Emoji"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <AtSign style={{ width: '14px', height: '14px', color: '#0284c7' }} />
-                        <span>Assign Task To Team Member</span>
-                      </span>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>{users.length} profiles</span>
-                    </div>
+                    <Smile style={{ width: '22px', height: '22px' }} />
+                  </button>
 
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="text"
-                        placeholder="Type name, role, or department..."
-                        value={tagSearch}
-                        onChange={(e) => setTagSearch(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '7px 10px',
-                          fontSize: '0.8rem',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          outline: 'none',
-                          background: '#f8fafc',
-                          boxSizing: 'border-box'
-                        }}
-                        autoFocus
-                      />
-                    </div>
+                  {/* Message Input Textbox */}
+                  <input
+                    type="text"
+                    placeholder="Message"
+                    value={messageInput}
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend(e);
+                      }
+                    }}
+                    className="whatsapp-text-field"
+                  />
 
-                    <div style={{ overflowY: 'auto', maxHeight: '190px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {users
-                        .filter(u => {
-                          const q = tagSearch.toLowerCase();
-                          return (u.name || '').toLowerCase().includes(q) ||
-                                 (u.role || '').toLowerCase().includes(q) ||
-                                 (u.department || '').toLowerCase().includes(q);
-                        })
-                        .map(u => {
-                          const r = (u.role || '').toLowerCase();
-                          const isEa = r.includes('ea');
-                          const isManager = r.includes('manager');
-                          const isAdmin = r.includes('admin');
-                          const roleColor = isEa ? { bg: '#fef3c7', text: '#b45309', border: '#fde68a' }
-                            : isManager ? { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' }
-                            : isAdmin ? { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' }
-                            : { bg: '#f1f5f9', text: '#334155', border: '#e2e8f0' };
+                  {/* Paperclip Attach Menu Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAttachMenu(!showAttachMenu)}
+                    className="whatsapp-icon-btn"
+                    title="Attach Media / Files"
+                  >
+                    <Paperclip style={{ width: '20px', height: '20px', transform: 'rotate(-45deg)' }} />
+                  </button>
 
-                          return (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() => {
-                                setTaggedUser(u);
-                                setShowTagMenu(false);
-                                setTagSearch('');
-                                if (!messageInput) {
-                                  setMessageInput('Please prepare ');
-                                }
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '7px 10px',
-                                borderRadius: '8px',
-                                border: taggedUser?.id === u.id ? '1px solid #0284c7' : '1px solid transparent',
-                                background: taggedUser?.id === u.id ? '#f0f9ff' : 'transparent',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                transition: 'all 0.15s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                if (taggedUser?.id !== u.id) e.currentTarget.style.background = '#f8fafc';
-                              }}
-                              onMouseLeave={(e) => {
-                                if (taggedUser?.id !== u.id) e.currentTarget.style.background = 'transparent';
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div
-                                  style={{
-                                    width: '28px',
-                                    height: '28px',
-                                    borderRadius: '8px',
-                                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                                    color: '#fff',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '11px',
-                                    fontWeight: 800,
-                                    boxShadow: '0 1px 4px rgba(2, 132, 199, 0.25)',
-                                    flexShrink: 0
-                                  }}
-                                >
-                                  {u.avatar || u.name?.[0]?.toUpperCase() || '👤'}
-                                </div>
-                                <div>
-                                  <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0f172a' }}>
-                                    {u.name}
-                                  </div>
-                                  <div style={{ fontSize: '0.69rem', color: '#64748b' }}>
-                                    {u.department || 'Operations'}
-                                  </div>
-                                </div>
-                              </div>
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
-                                  padding: '2px 7px',
-                                  borderRadius: '5px',
-                                  background: roleColor.bg,
-                                  color: roleColor.text,
-                                  border: `1px solid ${roleColor.border}`
-                                }}
-                              >
-                                {u.role}
-                              </span>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </div>
+                  {/* Tag Person Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTagMenu(!showTagMenu);
+                      setShowEmojiPicker(false);
+                      setShowAttachMenu(false);
+                    }}
+                    className="whatsapp-icon-btn"
+                    style={{
+                      color: taggedUser ? '#00a884' : '#54656f',
+                      background: taggedUser ? 'rgba(0, 168, 132, 0.12)' : 'none'
+                    }}
+                    title="Tag & Assign Task"
+                  >
+                    <AtSign style={{ width: '19px', height: '19px' }} />
+                  </button>
+                </div>
+
+                {/* Circular Action Button: Send if text typed, Mic if empty */}
+                {messageInput.trim().length > 0 ? (
+                  <button
+                    type="submit"
+                    className="whatsapp-circle-action-btn"
+                    title="Send Message"
+                  >
+                    <Send style={{ width: '18px', height: '18px', marginLeft: '2px' }} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="whatsapp-circle-action-btn"
+                    title="Record Voice Note"
+                  >
+                    <Mic style={{ width: '20px', height: '20px' }} />
+                  </button>
                 )}
-
-                {/* Attach Task Reference Dropdown (hidden on mobile to give space to input text) */}
-                <select
-                  value={selectedTaskAttach}
-                  onChange={(e) => setSelectedTaskAttach(e.target.value)}
-                  className="select-dropdown header-label-desktop"
-                  style={{ width: 'auto', maxWidth: '210px', padding: '0.5rem 0.75rem', fontSize: '0.8125rem', flexShrink: 0 }}
-                >
-                  <option value="">Attach Task Reference...</option>
-                  {tasks.map(t => <option key={t.id} value={t.id}>{t.id} - {t.title.slice(0, 22)}...</option>)}
-                </select>
-
-                {/* Message Input Textbox */}
-                <input
-                  type="text"
-                  placeholder={`Message ${chatDisplayName}...`}
-                  value={messageInput}
-                  onChange={handleInputChange}
-                  className="input-text"
-                  style={{ flex: 1, minWidth: 0, padding: '0.65rem 1rem', fontSize: '0.875rem' }}
-                />
-
-                {/* Voice Note Record Microphone Button */}
-                <button
-                  type="button"
-                  onClick={startRecording}
-                  className="chat-voice-btn"
-                  style={{
-                    background: '#e0f2fe',
-                    border: '1px solid #bae6fd',
-                    color: '#0284c7',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    flexShrink: 0
-                  }}
-                  title="Record WhatsApp Voice Note"
-                >
-                  <Mic style={{ width: '17px', height: '17px' }} />
-                  <span className="header-label-tablet">Audio</span>
-                </button>
-
-                {/* Send Button */}
-                <button
-                  type="submit"
-                  className="btn btn-primary chat-send-btn"
-                  style={{ padding: '0.65rem 1.15rem', display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}
-                >
-                  <Send style={{ width: '16px', height: '16px' }} />
-                  <span className="header-label-tablet">Send</span>
-                </button>
               </div>
             )}
           </form>

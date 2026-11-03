@@ -146,7 +146,7 @@ export const TaskProvider = ({ children }) => {
     setDeviceMode(deviceMode === 'mobile' ? 'web' : 'mobile');
   };
 
-  const isMobileView = deviceMode === 'mobile' || (deviceMode !== 'web' && windowWidth <= 768);
+  const isMobileView = (typeof window !== 'undefined' && window.innerWidth <= 768) || windowWidth <= 768 || deviceMode === 'mobile';
 
   useEffect(() => {
     if (activeUser && activeUser.id) {

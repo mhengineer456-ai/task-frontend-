@@ -115,6 +115,11 @@ export default function Header({ onOpenNotifications }) {
     { id: 'violet', name: 'Royal Violet', color: '#8b5cf6' }
   ];
 
+  // Do not render the global app header on mobile when inside the chat view (WhatsApp has its own header)
+  if ((isMobileView || (typeof window !== 'undefined' && window.innerWidth <= 768)) && activeView === 'chat') {
+    return null;
+  }
+
   return (
     <>
       <header className="app-header">

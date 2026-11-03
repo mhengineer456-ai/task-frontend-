@@ -68,25 +68,29 @@ function MainLayout() {
 
       {/* Main Content Area */}
       <div className="main-content-wrapper">
-        <Header onOpenNotifications={() => setIsNotificationsOpen(true)} />
+        {(!isMobileView || activeView !== 'chat') && (
+          <Header onOpenNotifications={() => setIsNotificationsOpen(true)} />
+        )}
 
         <main
           className={`main-viewport-content ${activeView === 'chat' ? 'chat-viewport overflow-hidden' : 'overflow-y-auto'}`}
           style={{
             flex: 1,
             minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
             overflowY: activeView === 'chat' ? 'hidden' : 'auto',
             overflowX: 'hidden',
             height: isMobileView
               ? (activeView === 'chat'
-                  ? 'calc(100vh - 60px - 64px - env(safe-area-inset-bottom, 0px))'
-                  : 'calc(100vh - 60px)')
-              : 'calc(100vh - 68px)',
+                  ? 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))'
+                  : 'calc(100dvh - 60px)')
+              : 'calc(100dvh - 68px)',
             maxHeight: isMobileView
               ? (activeView === 'chat'
-                  ? 'calc(100vh - 60px - 64px - env(safe-area-inset-bottom, 0px))'
-                  : 'calc(100vh - 60px)')
-              : 'calc(100vh - 68px)',
+                  ? 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))'
+                  : 'calc(100dvh - 60px)')
+                : 'calc(100dvh - 68px)',
             paddingBottom: (isMobileView && activeView !== 'chat')
               ? 'calc(100px + env(safe-area-inset-bottom, 0px))'
               : 0
