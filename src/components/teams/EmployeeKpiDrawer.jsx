@@ -235,7 +235,7 @@ export default function EmployeeKpiDrawer({ employeeId, onClose }) {
                     borderRadius: '16px',
                     objectFit: 'cover',
                     border: '2px solid var(--brand-primary)',
-                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)'
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
                   }}
                 />
               ) : (
@@ -251,7 +251,7 @@ export default function EmployeeKpiDrawer({ employeeId, onClose }) {
                     justifyContent: 'center',
                     fontWeight: 900,
                     fontSize: '1.2rem',
-                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)'
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
                   }}
                 >
                   {(employee.name || 'U').slice(0, 2).toUpperCase()}
@@ -433,7 +433,7 @@ export default function EmployeeKpiDrawer({ employeeId, onClose }) {
                   🚀 Top 10% Speed • Target: &lt;16h
                 </div>
               </div>
-              <div className="kpi-icon-wrap" style={{ background: 'rgba(79, 70, 229, 0.12)', color: 'var(--brand-primary)' }}>
+              <div className="kpi-icon-wrap" style={{ background: 'rgba(37, 99, 235, 0.12)', color: 'var(--brand-primary)' }}>
                 <Zap style={{ width: '22px', height: '22px' }} />
               </div>
             </div>
@@ -475,7 +475,7 @@ export default function EmployeeKpiDrawer({ employeeId, onClose }) {
             </div>
 
             {/* Card 5: Overall Performance Index */}
-            <div className="kpi-metric-card" style={{ cursor: 'default', background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(2, 132, 199, 0.05))', borderColor: 'var(--brand-primary)' }}>
+            <div className="kpi-metric-card" style={{ cursor: 'default', background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(2, 132, 199, 0.05))', borderColor: 'var(--brand-primary)' }}>
               <div>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                   Overall Performance

@@ -206,8 +206,8 @@ export default function TaskListView() {
           className="glass-panel"
           style={{
             padding: '0.75rem 1rem',
-            background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(2, 132, 199, 0.06))',
-            border: '1px solid rgba(79, 70, 229, 0.25)',
+            background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(2, 132, 199, 0.06))',
+            border: '1px solid rgba(37, 99, 235, 0.25)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.5rem'
@@ -284,7 +284,7 @@ export default function TaskListView() {
               Across {departments.length} departments
             </div>
           </div>
-          <div className="kpi-icon-wrap" style={{ background: 'rgba(79, 70, 229, 0.12)', color: 'var(--brand-primary)' }}>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(37, 99, 235, 0.12)', color: 'var(--brand-primary)' }}>
             <Layers style={{ width: '22px', height: '22px' }} />
           </div>
         </div>
@@ -600,7 +600,7 @@ export default function TaskListView() {
                   <tr
                     key={t.id}
                     className={isPinned ? 'table-row-pinned' : ''}
-                    style={{ background: isSelected ? 'rgba(79, 70, 229, 0.1)' : undefined }}
+                    style={{ background: isSelected ? 'rgba(37, 99, 235, 0.1)' : undefined }}
                   >
                     {/* Checkbox */}
                     <td style={{ textAlign: 'center' }}>

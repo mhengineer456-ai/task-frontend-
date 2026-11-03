@@ -147,7 +147,7 @@ export default function EaDashboardView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '6px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)', color: '#ffffff', padding: '4px 12px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, background: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)', color: '#ffffff', padding: '4px 12px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               📋 Executive Operations
             </span>
             <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -190,15 +190,15 @@ export default function EaDashboardView() {
       {/* Stats Gauges Bar */}
       <div className="grid grid-cols-4 lg-grid-cols-2 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
         {/* Daily Routine Compliance */}
-        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #4f46e5' }}>
+        <div className="glass-card" style={{ padding: '1.1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #2563eb' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Daily Compliance</span>
-            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '1px solid #c7d2fe', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #bfdbfe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CheckSquare style={{ width: '18px', height: '18px' }} />
             </div>
           </div>
           <div style={{ marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#4f46e5', letterSpacing: '-0.02em', display: 'block' }}>
+            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#2563eb', letterSpacing: '-0.02em', display: 'block' }}>
               {completedDailyCount} / {totalDailyCount} ({dailyCompliancePercentage}%)
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Live MD Screen Monitor</span>

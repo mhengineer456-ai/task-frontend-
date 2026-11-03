@@ -120,7 +120,7 @@ export default function TaskCalendarView() {
       case 'Critical': return '#ef4444';
       case 'Urgent': return '#f59e0b';
       case 'High': return '#f97316';
-      default: return '#4f46e5';
+      default: return '#2563eb';
     }
   };
 
@@ -131,7 +131,7 @@ export default function TaskCalendarView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
               <CalendarIcon style={{ width: '17px', height: '17px' }} />
             </div>
             <span>Interactive Task Calendar</span>
@@ -183,7 +183,7 @@ export default function TaskCalendarView() {
               Scheduled in {monthNames[month]}
             </div>
           </div>
-          <div className="kpi-icon-wrap" style={{ background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5' }}>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}>
             <Layers style={{ width: '22px', height: '22px' }} />
           </div>
         </div>
@@ -336,8 +336,8 @@ export default function TaskCalendarView() {
                             fontWeight: 800,
                             padding: '1px 5px',
                             borderRadius: '99px',
-                            background: isToday ? '#e0e7ff' : '#f1f5f9',
-                            color: isToday ? '#4338ca' : 'var(--text-muted)'
+                            background: isToday ? '#dbeafe' : '#f1f5f9',
+                            color: isToday ? '#1d4ed8' : 'var(--text-muted)'
                           }}
                         >
                           {cell.tasks.length}
@@ -433,8 +433,8 @@ export default function TaskCalendarView() {
                             width: '36px',
                             height: '36px',
                             borderRadius: '10px',
-                            background: isDone ? 'rgba(16, 185, 129, 0.1)' : isLate ? 'rgba(239, 68, 68, 0.1)' : 'rgba(79, 70, 229, 0.1)',
-                            color: isDone ? '#10b981' : isLate ? '#ef4444' : '#4f46e5',
+                            background: isDone ? 'rgba(16, 185, 129, 0.1)' : isLate ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+                            color: isDone ? '#10b981' : isLate ? '#ef4444' : '#2563eb',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -504,7 +504,7 @@ export default function TaskCalendarView() {
                 <div key={group.date} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {/* Date Badge Header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#4f46e5', background: 'rgba(79, 70, 229, 0.08)', padding: '3px 10px', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#2563eb', background: 'rgba(37, 99, 235, 0.08)', padding: '3px 10px', borderRadius: '8px' }}>
                       📅 {formatDate(group.date)}
                     </span>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -513,7 +513,7 @@ export default function TaskCalendarView() {
                   </div>
 
                   {/* Task Cards for that Date */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingLeft: '0.5rem', borderLeft: '2px solid rgba(79, 70, 229, 0.15)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingLeft: '0.5rem', borderLeft: '2px solid rgba(37, 99, 235, 0.2)' }}>
                     {group.tasks.map(t => {
                       const assignee = users.find(u => u.id === t.assigneeId);
                       const isLate = isOverdue(t.dueDate, t.status);

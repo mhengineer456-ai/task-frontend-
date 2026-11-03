@@ -133,7 +133,7 @@ export default function Sidebar() {
       case 'md':
         return { bg: 'rgba(16, 185, 129, 0.12)', text: '#10b981', border: '#a7f3d0' };
       case 'manager':
-        return { bg: 'rgba(79, 70, 229, 0.12)', text: '#6366f1', border: '#c7d2fe' };
+        return { bg: 'rgba(37, 99, 235, 0.12)', text: '#2563eb', border: '#bfdbfe' };
       case 'ea':
         return { bg: 'rgba(139, 92, 246, 0.12)', text: '#8b5cf6', border: '#ddd6fe' };
       default:
@@ -185,7 +185,7 @@ export default function Sidebar() {
                 width: '38px',
                 height: '38px',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, var(--brand-primary) 0%, #06b6d4 100%)',
+                background: 'var(--brand-gradient)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

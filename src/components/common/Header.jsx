@@ -108,6 +108,7 @@ export default function Header({ onOpenNotifications }) {
   };
 
   const accents = [
+    { id: 'sapphire', name: 'Royal Sapphire', color: '#2563eb' },
     { id: 'indigo', name: 'Electric Indigo', color: '#4f46e5' },
     { id: 'cyan', name: 'Cyan Ocean', color: '#0284c7' },
     { id: 'emerald', name: 'Emerald Mint', color: '#10b981' },
@@ -153,7 +154,7 @@ export default function Header({ onOpenNotifications }) {
               </button>
 
               <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.02em' }}>
                   {getViewTitle()}
                 </div>
                 <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -168,16 +169,16 @@ export default function Header({ onOpenNotifications }) {
             </div>
 
             {/* Right: Switch to Web + Search + Notifications + Theme + Menu */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-              {/* Primary Switch to Web App Toggle Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+              {/* Desktop Mode Quick Icon Switcher */}
               <button
                 type="button"
                 onClick={toggleDeviceMode}
-                className="btn-mobile-mode-switch"
+                className="btn-icon"
+                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
                 title="Switch to Desktop / Web App layout"
               >
-                <Monitor style={{ width: '13px', height: '13px', color: 'var(--brand-primary)' }} />
-                <span>Web</span>
+                <Monitor style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
               </button>
 
               {/* Fast Search Trigger (Cmd+K) */}
@@ -185,7 +186,7 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={() => setIsCommandPaletteOpen(true)}
                 className="btn-icon"
-                style={{ padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
+                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
                 title="Search tasks & commands (Ctrl+K)"
               >
                 <Search style={{ width: '15px', height: '15px', color: 'var(--text-primary)' }} />
@@ -196,7 +197,7 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={onOpenNotifications}
                 className="btn-icon"
-                style={{ position: 'relative', padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
+                style={{ position: 'relative', padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
                 title="Notifications"
               >
                 <Bell style={{ width: '15px', height: '15px', color: 'var(--text-primary)' }} />
@@ -229,7 +230,7 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="btn-icon"
-                style={{ padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
+                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
                 title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
               >
                 {theme === 'dark' ? (
@@ -244,7 +245,7 @@ export default function Header({ onOpenNotifications }) {
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="btn-icon"
-                style={{ padding: '5px', borderRadius: '8px', background: 'var(--bg-input)' }}
+                style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
                 title="Open Sidebar Navigation"
               >
                 <Menu style={{ width: '16px', height: '16px', color: 'var(--brand-primary)' }} />
@@ -274,7 +275,7 @@ export default function Header({ onOpenNotifications }) {
                   Workspace
                 </span>
                 <ChevronRight style={{ width: '13px', height: '13px', opacity: 0.5 }} />
-                <span style={{ color: 'var(--brand-primary)', fontWeight: 800, background: 'rgba(79, 70, 229, 0.08)', padding: '2px 8px', borderRadius: '6px' }}>
+                <span style={{ color: 'var(--brand-primary)', fontWeight: 800, background: 'rgba(37, 99, 235, 0.08)', padding: '2px 8px', borderRadius: '6px' }}>
                   {getViewTitle()}
                 </span>
               </div>
@@ -303,7 +304,7 @@ export default function Header({ onOpenNotifications }) {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <Search style={{ position: 'absolute', left: '12px', width: '15px', height: '15px', color: '#4f46e5' }} />
+                  <Search style={{ position: 'absolute', left: '12px', width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
                   <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)', userSelect: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Search tasks, team members, commands...
                   </span>
@@ -417,8 +418,8 @@ export default function Header({ onOpenNotifications }) {
             onClick={() => setActiveView('chat')}
             className="btn btn-secondary header-btn-responsive"
             style={{
-              background: activeView === 'chat' ? 'linear-gradient(135deg, #4f46e5, #06b6d4)' : '#ffffff',
-              color: activeView === 'chat' ? '#ffffff' : '#4f46e5',
+              background: activeView === 'chat' ? 'linear-gradient(135deg, #2563eb, #0284c7)' : '#ffffff',
+              color: activeView === 'chat' ? '#ffffff' : '#2563eb',
               border: '1px solid #cbd5e1',
               boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
               display: 'flex',
@@ -433,7 +434,7 @@ export default function Header({ onOpenNotifications }) {
             }}
             title="Ask PulseBot AI assistant"
           >
-            <Sparkles style={{ width: '15px', height: '15px', color: activeView === 'chat' ? '#ffffff' : '#4f46e5' }} />
+            <Sparkles style={{ width: '15px', height: '15px', color: activeView === 'chat' ? '#ffffff' : '#2563eb' }} />
             <span className="header-label-tablet">PulseBot AI</span>
           </button>
 
@@ -452,7 +453,7 @@ export default function Header({ onOpenNotifications }) {
               }}
               title="Register new team member or employee"
             >
-              <UserPlus style={{ width: '15px', height: '15px', color: '#4f46e5' }} />
+              <UserPlus style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
               <span className="header-label-tablet">Add User</span>
             </button>
           )}
@@ -464,8 +465,8 @@ export default function Header({ onOpenNotifications }) {
             style={{
               padding: '6px 14px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
-              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.28)',
+              background: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)',
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.28)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',

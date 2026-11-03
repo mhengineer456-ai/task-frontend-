@@ -67,10 +67,10 @@ export default function DashboardView() {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '1.25rem',
-          background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 48%, #0284c7 100%)',
+          background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 48%, #0284c7 100%)',
           border: '1px solid rgba(255, 255, 255, 0.25)',
           color: '#ffffff',
-          boxShadow: '0 12px 32px -4px rgba(79, 70, 229, 0.3)',
+          boxShadow: '0 12px 32px -4px rgba(37, 99, 235, 0.28)',
           overflow: 'hidden'
         }}
       >
@@ -136,7 +136,7 @@ export default function DashboardView() {
             className="btn"
             style={{
               background: '#ffffff',
-              color: '#4f46e5',
+              color: '#2563eb',
               fontWeight: 800,
               padding: '0.65rem 1.35rem',
               borderRadius: '14px',
@@ -145,7 +145,7 @@ export default function DashboardView() {
               transition: 'all 0.2s ease'
             }}
           >
-            <Plus style={{ width: '16px', height: '16px', color: '#4f46e5' }} />
+            <Plus style={{ width: '16px', height: '16px', color: '#2563eb' }} />
             <span>+ Create New Task</span>
           </button>
         </div>
@@ -254,10 +254,10 @@ export default function DashboardView() {
       {/* 6 Core Metric Cards */}
       <div className="grid grid-cols-6 lg-grid-cols-3 sm-grid-cols-2 mobile-metrics-grid" style={{ gap: '0.85rem' }}>
         {/* Total Tasks */}
-        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #4f46e5' }}>
+        <div className="glass-card" style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', borderTop: '3px solid #2563eb' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total Tasks</span>
-            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)', border: '1px solid #c7d2fe', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', border: '1px solid #bfdbfe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Layers style={{ width: '18px', height: '18px' }} />
             </div>
           </div>

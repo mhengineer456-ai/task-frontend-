@@ -125,7 +125,7 @@ export default function MyTasksView() {
               Active deliverable queue
             </div>
           </div>
-          <div className="kpi-icon-wrap" style={{ background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5' }}>
+          <div className="kpi-icon-wrap" style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}>
             <Layers style={{ width: '22px', height: '22px' }} />
           </div>
         </div>

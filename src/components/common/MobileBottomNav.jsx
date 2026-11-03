@@ -237,7 +237,7 @@ export default function MobileBottomNav() {
             {/* Sheet Grid Items */}
             <div className="mobile-sheet-grid">
               <button onClick={() => handleNavClick('kanban')} className="mobile-sheet-grid-item">
-                <div className="grid-icon-circle" style={{ background: 'rgba(79, 70, 229, 0.12)', color: 'var(--brand-primary)' }}>
+                <div className="grid-icon-circle" style={{ background: 'rgba(37, 99, 235, 0.12)', color: 'var(--brand-primary)' }}>
                   <Kanban style={{ width: '20px', height: '20px' }} />
                 </div>
                 <span>Kanban Board</span>
