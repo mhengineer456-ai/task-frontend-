@@ -15,7 +15,9 @@ import {
   Volume1,
   MonitorUp,
   MonitorOff,
-  Sparkles
+  Sparkles,
+  SwitchCamera,
+  Smartphone
 } from 'lucide-react';
 import { useCallContext } from '../../context/CallContext';
 import CallAiSummaryModal from './CallAiSummaryModal';
@@ -41,6 +43,11 @@ export default function CallOverlayModal() {
     localStream,
     remoteStream,
     screenStream,
+    facingMode,
+    switchCamera,
+    mobileNoticeOpen,
+    setMobileNoticeOpen,
+    isMobileDevice,
     acceptCall,
     rejectCall,
     endCall,
@@ -521,9 +528,10 @@ export default function CallOverlayModal() {
                           playsInline
                           muted
                           className="call-local-video"
+                          style={facingMode === 'environment' ? { transform: 'none' } : undefined}
                         />
                         <div className="call-local-pip-label">
-                          <span>You</span>
+                          <span>{facingMode === 'environment' ? 'Rear Camera' : 'You'}</span>
                           {isMuted && <MicOff size={11} color="#EF4444" />}
                         </div>
                       </>
@@ -607,13 +615,26 @@ export default function CallOverlayModal() {
                   </button>
                 )}
 
+                {/* Flip Camera (Front / Rear) - Essential on mobile phones & tablets to show physical screens & surroundings */}
+                {isVideoCall && (
+                  <button
+                    type="button"
+                    onClick={switchCamera}
+                    disabled={isFailedOrEnded || isVideoOff}
+                    className={`call-dock-btn ${facingMode === 'environment' ? 'btn-active-rear' : ''}`}
+                    title={facingMode === 'environment' ? 'Switch to Front (Selfie) Camera' : 'Switch to Back (Rear) Camera'}
+                  >
+                    <SwitchCamera size={20} />
+                  </button>
+                )}
+
                 {/* Screen Share Toggle - Always visible on PC and Mobile during calls */}
                 <button
                   type="button"
                   onClick={toggleScreenShare}
                   disabled={isFailedOrEnded || isRinging}
                   className={`call-dock-btn ${isScreenSharing ? 'btn-active-screenshare' : ''}`}
-                  title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen (PC Window / Display / Tab)'}
+                  title={isScreenSharing ? 'Stop Screen Sharing' : (isMobileDevice ? 'Share Screen (Mobile Info)' : 'Share Screen (PC Window / Display / Tab)')}
                 >
                   {isScreenSharing ? <MonitorOff size={20} /> : <MonitorUp size={20} />}
                 </button>
@@ -650,6 +671,67 @@ export default function CallOverlayModal() {
                   <PhoneOff size={22} />
                 </button>
               </div>
+
+              {/* Mobile Screen Sharing Guidance Modal */}
+              {mobileNoticeOpen && (
+                <div className="call-mobile-notice-backdrop" onClick={() => setMobileNoticeOpen(false)}>
+                  <div className="call-mobile-notice-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="call-mobile-notice-header">
+                      <div className="call-mobile-notice-icon">
+                        <Smartphone size={26} />
+                      </div>
+                      <div className="call-mobile-notice-titles">
+                        <h4 className="call-mobile-notice-title">Mobile Screen Sharing</h4>
+                        <span className="call-mobile-notice-badge">Android & iOS Security Policy</span>
+                      </div>
+                    </div>
+
+                    <p className="call-mobile-notice-body">
+                      Mobile web browsers (Chrome on Android & Safari on iOS) restrict web pages from capturing your phone's screen due to mobile OS security & DRM policies.
+                    </p>
+
+                    <div className="call-mobile-notice-tips">
+                      <div className="call-mobile-tip-item">
+                        <span className="call-tip-bullet">1</span>
+                        <div>
+                          <strong>Switch to Back Camera:</strong>
+                          <p>Point your phone's rear camera at a computer screen, document, or physical workspace.</p>
+                        </div>
+                      </div>
+                      <div className="call-mobile-tip-item">
+                        <span className="call-tip-bullet">2</span>
+                        <div>
+                          <strong>Open on PC or Laptop:</strong>
+                          <p>For full native screen, application window, and browser tab sharing, open TaskPulse on your desktop or laptop.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="call-mobile-notice-actions">
+                      {isVideoCall && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMobileNoticeOpen(false);
+                            switchCamera();
+                          }}
+                          className="call-mobile-action-btn primary"
+                        >
+                          <SwitchCamera size={16} />
+                          <span>Switch to Back Camera</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setMobileNoticeOpen(false)}
+                        className="call-mobile-action-btn secondary"
+                      >
+                        Got It
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* PulseBot AI Summary Modal */}
               {isSummaryModalOpen && (

@@ -64,6 +64,14 @@ export const CallProvider = ({ children, activeUser }) => {
   const [isRemoteScreenSharing, setIsRemoteScreenSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('new');
+  const [facingMode, setFacingMode] = useState('user'); // 'user' (selfie) | 'environment' (rear camera)
+  const [mobileNoticeOpen, setMobileNoticeOpen] = useState(false);
+
+  // Detect mobile device
+  const isMobileDevice = typeof window !== 'undefined' && (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints && navigator.maxTouchPoints > 1 && window.innerWidth < 1024)
+  );
 
   // Media Streams
   const [localStream, setLocalStream] = useState(null);
@@ -195,6 +203,8 @@ export const CallProvider = ({ children, activeUser }) => {
     setIsFullscreen(false);
     setErrorMessage(null);
     setConnectionStatus('new');
+    setFacingMode('user');
+    setMobileNoticeOpen(false);
     callStartTimeRef.current = null;
   }, [stopActiveSound, cleanupMedia, cleanupPeerConnection]);
 
@@ -640,6 +650,72 @@ export const CallProvider = ({ children, activeUser }) => {
   }, [isVideoOff]);
 
   /**
+   * Switch between Front (Selfie) and Back (Rear) Camera
+   * Essential on mobile phones to show physical screens, documents, and surroundings during VC!
+   */
+  const switchCamera = useCallback(async () => {
+    if (callType !== 'video') return;
+    const nextFacingMode = facingMode === 'user' ? 'environment' : 'user';
+
+    try {
+      let newStream;
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { exact: nextFacingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+      } catch (exactErr) {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: nextFacingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+      }
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (!newVideoTrack) return;
+
+      const pc = peerConnectionRef.current;
+      if (pc) {
+        const videoSender = getVideoSender(pc);
+        if (videoSender) {
+          await videoSender.replaceTrack(newVideoTrack);
+        }
+      }
+
+      // Stop previous camera track to free hardware sensor
+      if (localStreamRef.current) {
+        const oldTracks = localStreamRef.current.getVideoTracks();
+        oldTracks.forEach((t) => {
+          try { t.stop(); } catch (e) {}
+          localStreamRef.current.removeTrack(t);
+        });
+        localStreamRef.current.addTrack(newVideoTrack);
+        setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+      } else {
+        localStreamRef.current = newStream;
+        setLocalStream(newStream);
+      }
+
+      setFacingMode(nextFacingMode);
+      setIsVideoOff(false);
+    } catch (camErr) {
+      console.warn('Switch camera error:', camErr);
+      setErrorMessage(
+        camErr.name === 'OverconstrainedError' || camErr.name === 'NotFoundError'
+          ? 'Rear camera not available on this device.'
+          : `Could not switch camera: ${camErr.message}`
+      );
+      setTimeout(() => setErrorMessage(null), 3500);
+    }
+  }, [callType, facingMode]);
+
+  /**
    * Toggle Audio Output Speaker (if setSinkId supported)
    */
   const toggleSpeaker = useCallback(() => {
@@ -745,10 +821,19 @@ export const CallProvider = ({ children, activeUser }) => {
    * Start Screen Sharing via getDisplayMedia
    */
   const startScreenShare = useCallback(async () => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-      setErrorMessage('Screen sharing is not supported in this browser or environment.');
-      setTimeout(() => setErrorMessage(null), 3500);
-      return;
+    if (isMobileDevice) {
+      // Check if getDisplayMedia is supported on this mobile browser
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+        console.log('📱 [ScreenShare] getDisplayMedia not supported by mobile browser');
+        setMobileNoticeOpen(true);
+        return;
+      }
+    } else {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        setErrorMessage('Screen sharing is not supported in this browser or environment.');
+        setTimeout(() => setErrorMessage(null), 3500);
+        return;
+      }
     }
 
     if (!peerConnectionRef.current && callState === 'IDLE') {
@@ -759,22 +844,23 @@ export const CallProvider = ({ children, activeUser }) => {
     try {
       let screen;
       try {
-        screen = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            cursor: 'always'
-          },
-          audio: false
-        });
-      } catch (firstErr) {
-        if (firstErr.name === 'NotAllowedError') {
-          console.log('User cancelled screen selection dialog');
-          return;
-        }
-        console.warn('Advanced display media constraints failed, falling back to basic video: true', firstErr);
+        // Universal clean display media constraints (works across all browsers and devices without burning user activation)
         screen = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: false
         });
+      } catch (displayErr) {
+        if (isMobileDevice) {
+          // Mobile browsers (Android Chrome / iOS) often throw NotAllowedError due to OS MediaProjection policies
+          console.warn('Mobile screen capture rejected by OS or user:', displayErr);
+          setMobileNoticeOpen(true);
+          return;
+        }
+        if (displayErr.name === 'NotAllowedError') {
+          console.log('User cancelled screen selection dialog');
+          return;
+        }
+        throw displayErr;
       }
 
       screenStreamRef.current = screen;
@@ -856,7 +942,9 @@ export const CallProvider = ({ children, activeUser }) => {
         });
       }
     } catch (err) {
-      if (err.name === 'NotAllowedError') {
+      if (isMobileDevice) {
+        setMobileNoticeOpen(true);
+      } else if (err.name === 'NotAllowedError') {
         console.log('User cancelled screen selection dialog');
       } else {
         console.error('Screen sharing error:', err);
@@ -864,7 +952,7 @@ export const CallProvider = ({ children, activeUser }) => {
         setTimeout(() => setErrorMessage(null), 4000);
       }
     }
-  }, [callId, callState, remoteUser?.id, stopScreenShare]);
+  }, [callId, callState, isMobileDevice, remoteUser?.id, stopScreenShare]);
 
   /**
    * Toggle Screen Sharing
@@ -1193,7 +1281,12 @@ export const CallProvider = ({ children, activeUser }) => {
         toggleScreenShare,
         startScreenShare,
         stopScreenShare,
-        fetchCallHistory
+        fetchCallHistory,
+        facingMode,
+        switchCamera,
+        mobileNoticeOpen,
+        setMobileNoticeOpen,
+        isMobileDevice
       }}
     >
       {children}
