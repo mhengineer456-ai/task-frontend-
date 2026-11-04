@@ -65,6 +65,8 @@ export const CallProvider = ({ children, activeUser }) => {
   const durationTimerRef = useRef(null);
   const callTimeoutTimerRef = useRef(null);
   const callStartTimeRef = useRef(null);
+  const remoteUserRef = useRef(null);
+  const pendingScreenShareRef = useRef(false);
 
   // Fetch configured ICE servers on mount
   useEffect(() => {
@@ -227,6 +229,10 @@ export const CallProvider = ({ children, activeUser }) => {
         t.enabled = true;
       });
       setRemoteStream(new MediaStream(stream.getTracks()));
+
+      // Media is arriving - ensure call state is marked CONNECTED and ringtone is stopped
+      setCallState('CONNECTED');
+      stopActiveSound();
     };
 
     // ICE Candidate handler
@@ -240,6 +246,15 @@ export const CallProvider = ({ children, activeUser }) => {
             candidate: event.candidate
           });
         }
+      }
+    };
+
+    // ICE Connection state handler (Critical for NAT/relay where iceConnectionState triggers first)
+    pc.oniceconnectionstatechange = () => {
+      console.log('🧊 [WebRTC] ICE Connection state:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        setCallState('CONNECTED');
+        stopActiveSound();
       }
     };
 
@@ -269,7 +284,7 @@ export const CallProvider = ({ children, activeUser }) => {
   /**
    * Start Outgoing Call
    */
-  const startCall = useCallback(async (targetUser, type = 'voice', chatChannelId = null) => {
+  const startCall = useCallback(async (targetUser, type = 'voice', chatChannelId = null, autoShareScreen = false) => {
     if (!activeUser?.id || !targetUser?.id) return;
     if (callState !== 'IDLE') {
       console.warn('Cannot initiate call: already in another call state:', callState);
@@ -277,11 +292,13 @@ export const CallProvider = ({ children, activeUser }) => {
     }
 
     const newCallId = `call-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const isVideo = type === 'video';
+    const isVideo = type === 'video' || autoShareScreen;
 
     setCallId(newCallId);
-    setCallType(type);
+    setCallType(isVideo ? 'video' : type);
     setRemoteUser(targetUser);
+    remoteUserRef.current = targetUser;
+    pendingScreenShareRef.current = Boolean(autoShareScreen);
     setIsCaller(true);
     setChannelId(chatChannelId);
     setCallState('INITIATING');
@@ -406,6 +423,7 @@ export const CallProvider = ({ children, activeUser }) => {
 
     stopActiveSound();
     setCallState('CONNECTING');
+    remoteUserRef.current = remoteUser;
     const isVideo = callType === 'video';
 
     if (callTimeoutTimerRef.current) {
@@ -652,10 +670,11 @@ export const CallProvider = ({ children, activeUser }) => {
     }
 
     const socket = getSocket();
-    if (socket && remoteUser?.id) {
+    const targetId = remoteUserRef.current?.id || remoteUser?.id;
+    if (socket && targetId) {
       socket.emit('call:screenshare-toggle', {
         callId,
-        targetUserId: String(remoteUser.id),
+        targetUserId: String(targetId),
         isSharing: false
       });
     }
@@ -671,8 +690,8 @@ export const CallProvider = ({ children, activeUser }) => {
       return;
     }
 
-    if (!peerConnectionRef.current || callState !== 'CONNECTED') {
-      console.warn('Cannot share screen: call is not connected');
+    if (!peerConnectionRef.current && callState === 'IDLE') {
+      console.warn('Cannot share screen: call is not active');
       return;
     }
 
@@ -713,36 +732,47 @@ export const CallProvider = ({ children, activeUser }) => {
       };
 
       const pc = peerConnectionRef.current;
-      const senders = pc.getSenders();
-      const videoSender = senders.find((s) => s.track && s.track.kind === 'video');
+      const targetId = remoteUserRef.current?.id || remoteUser?.id;
 
-      if (videoSender) {
-        await videoSender.replaceTrack(screenTrack);
-      } else {
-        pc.addTrack(screenTrack, screen);
-        const offer = await pc.createOffer({
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: true
-        });
-        await pc.setLocalDescription(offer);
+      if (pc) {
+        const senders = pc.getSenders();
+        let videoSender = senders.find((s) => s.track && s.track.kind === 'video');
+        if (!videoSender) {
+          const transceivers = pc.getTransceivers ? pc.getTransceivers() : [];
+          const videoTransceiver = transceivers.find((t) => t.sender?.track?.kind === 'video' || t.receiver?.track?.kind === 'video');
+          if (videoTransceiver && videoTransceiver.sender) {
+            videoSender = videoTransceiver.sender;
+          }
+        }
 
-        const socket = getSocket();
-        if (socket && remoteUser?.id) {
-          socket.emit('call:offer', {
-            callId,
-            targetUserId: String(remoteUser.id),
-            offer
+        if (videoSender) {
+          await videoSender.replaceTrack(screenTrack);
+        } else {
+          pc.addTrack(screenTrack, screen);
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
           });
+          await pc.setLocalDescription(offer);
+
+          const socket = getSocket();
+          if (socket && targetId) {
+            socket.emit('call:offer', {
+              callId,
+              targetUserId: String(targetId),
+              offer
+            });
+          }
         }
       }
 
       setIsScreenSharing(true);
 
       const socket = getSocket();
-      if (socket && remoteUser?.id) {
+      if (socket && targetId) {
         socket.emit('call:screenshare-toggle', {
           callId,
-          targetUserId: String(remoteUser.id),
+          targetUserId: String(targetId),
           isSharing: true
         });
       }
@@ -792,6 +822,7 @@ export const CallProvider = ({ children, activeUser }) => {
       setCallId(payload.callId);
       setCallType(payload.callType || 'voice');
       setRemoteUser(payload.caller);
+      remoteUserRef.current = payload.caller;
       setIsCaller(false);
       setChannelId(payload.channelId || null);
       setCallState('INCOMING');
@@ -822,6 +853,9 @@ export const CallProvider = ({ children, activeUser }) => {
       console.log('✅ [Socket] Call accepted by peer:', payload);
       stopActiveSound();
       setCallState('CONNECTING');
+      if (payload.receiver) {
+        remoteUserRef.current = payload.receiver;
+      }
 
       if (callTimeoutTimerRef.current) {
         clearTimeout(callTimeoutTimerRef.current);
@@ -913,6 +947,16 @@ export const CallProvider = ({ children, activeUser }) => {
               await pc.addIceCandidate(new RTCIceCandidate(candidate));
             } catch (e) {}
           }
+
+          // Once answer is processed, promote to CONNECTED and start queued screen sharing if requested
+          setTimeout(() => {
+            setCallState((prev) => (prev === 'CONNECTING' ? 'CONNECTED' : prev));
+            stopActiveSound();
+            if (pendingScreenShareRef.current) {
+              pendingScreenShareRef.current = false;
+              startScreenShare();
+            }
+          }, 450);
         } catch (err) {
           console.error('Error handling SDP answer:', err);
         }

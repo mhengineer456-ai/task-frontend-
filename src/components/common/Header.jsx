@@ -181,9 +181,9 @@ export default function Header({ onOpenNotifications }) {
                 onClick={toggleDeviceMode}
                 className="btn-icon"
                 style={{ padding: '6px', borderRadius: '10px', background: 'var(--bg-input)' }}
-                title="Switch to Desktop / Web App layout"
+                title="Switch layout: Mobile vs Desktop view"
               >
-                <Monitor style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
+                <Layers style={{ width: '15px', height: '15px', color: 'var(--brand-primary)' }} />
               </button>
 
               {/* Fast Search Trigger (Cmd+K) */}

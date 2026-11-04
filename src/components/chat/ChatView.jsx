@@ -29,6 +29,7 @@ import {
   Download,
   Phone,
   Video,
+  MonitorUp,
   MoreVertical,
   Music,
   Plus,
@@ -1151,13 +1152,13 @@ export default function ChatView() {
 
   const { startCall } = useCallContext();
 
-  const handleStartCall = (type, targetContact) => {
+  const handleStartCall = (type, targetContact, autoShareScreen = false) => {
     const contact = targetContact || directContact;
     if (!contact || !contact.id) {
       console.warn('Target contact not found for call.');
       return;
     }
-    startCall(contact, type, activeChannel?.id);
+    startCall(contact, type, activeChannel?.id, autoShareScreen);
   };
 
   const handleCopyMessage = (msgId, text) => {
@@ -2112,6 +2113,26 @@ export default function ChatView() {
                   title={`Video Call with ${chatDisplayName}`}
                 >
                   <Video style={{ width: '15px', height: '15px' }} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleStartCall('video', directContact, true)}
+                  style={{
+                    padding: '7px',
+                    borderRadius: '50%',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-color)',
+                    color: '#25D366',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title={`Share Screen with ${chatDisplayName} (PC Display / Window)`}
+                >
+                  <MonitorUp style={{ width: '15px', height: '15px' }} />
                 </button>
               </>
             )}

@@ -589,18 +589,16 @@ export default function CallOverlayModal() {
                   </button>
                 )}
 
-                {/* Screen Share Toggle */}
-                {isConnected && (
-                  <button
-                    type="button"
-                    onClick={toggleScreenShare}
-                    disabled={isFailedOrEnded}
-                    className={`call-dock-btn ${isScreenSharing ? 'btn-active-screenshare' : ''}`}
-                    title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen'}
-                  >
-                    {isScreenSharing ? <MonitorOff size={20} /> : <MonitorUp size={20} />}
-                  </button>
-                )}
+                {/* Screen Share Toggle - Always visible on PC and Mobile during calls */}
+                <button
+                  type="button"
+                  onClick={toggleScreenShare}
+                  disabled={isFailedOrEnded || isRinging}
+                  className={`call-dock-btn ${isScreenSharing ? 'btn-active-screenshare' : ''}`}
+                  title={isScreenSharing ? 'Stop Screen Sharing' : 'Share Screen (PC Window / Display / Tab)'}
+                >
+                  {isScreenSharing ? <MonitorOff size={20} /> : <MonitorUp size={20} />}
+                </button>
 
                 {/* Speaker Output Toggle */}
                 <button
@@ -614,16 +612,15 @@ export default function CallOverlayModal() {
                 </button>
 
                 {/* AI Meeting Summary & Notes Button */}
-                {isConnected && (
-                  <button
-                    type="button"
-                    onClick={() => setIsSummaryModalOpen(true)}
-                    className="call-dock-btn"
-                    title="PulseBot AI Meeting Minutes & Tasks"
-                  >
-                    <Sparkles size={19} />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setIsSummaryModalOpen(true)}
+                  disabled={isFailedOrEnded || isRinging}
+                  className="call-dock-btn"
+                  title="PulseBot AI Meeting Minutes & Tasks"
+                >
+                  <Sparkles size={19} />
+                </button>
 
                 {/* Red End Call Button */}
                 <button
