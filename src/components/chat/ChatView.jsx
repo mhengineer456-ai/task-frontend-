@@ -43,7 +43,8 @@ import {
   Copy,
   Check,
   PhoneCall,
-  RefreshCw
+  RefreshCw,
+  Edit3
 } from 'lucide-react';
 import AudioPlayerBubble from './AudioPlayerBubble';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
@@ -53,6 +54,8 @@ import AiAssistantInfoModal from './AiAssistantInfoModal';
 import LinkedSheetsModal from './LinkedSheetsModal';
 import ProductionTrackingCard from './ProductionTrackingCard';
 import AiTaskDelegationCard from './AiTaskDelegationCard';
+import AiMessageRenderer from './AiMessageRenderer';
+import AiMessageActions from './AiMessageActions';
 import { extractTrackingData, splitMessageIntroAndNotes } from '../../utils/trackingDataParser';
 import StatusCarousel from '../status/StatusCarousel';
 import StatusListPane from '../status/StatusListPane';
@@ -1122,10 +1125,14 @@ export default function ChatView() {
     isStatusCreatorOpen,
     setIsStatusCreatorOpen,
     isStatusPrivacyOpen,
-    setIsStatusPrivacyOpen
+    setIsStatusPrivacyOpen,
+    stopAiGeneration,
+    regenerateAiResponse,
+    sendAiFeedback
   } = useTaskContext();
 
   const [messageInput, setMessageInput] = useState('');
+  const [editingMessage, setEditingMessage] = useState(null);
   const [selectedTaskAttach, setSelectedTaskAttach] = useState('');
   const [selectedImage, setSelectedImage] = useState(null); // { dataUrl, name, size }
   const [selectedFile, setSelectedFile] = useState(null); // { dataUrl, name, size, type }
@@ -1357,13 +1364,16 @@ export default function ChatView() {
     return () => clearTimeout(timer);
   }, [activeChannelId]);
 
-  // Only auto-scroll on new messages if user was already at the bottom and not prepending older messages
+  const streamingMsg = channelMessages.find(m => m.isStreaming);
+  const streamingTextLength = streamingMsg?.text?.length || 0;
+
+  // Only auto-scroll on new messages or streaming chunks if user was already at the bottom and not prepending older messages
   useEffect(() => {
     if (isPrependingRef.current) return;
     if (isAutoScrollEnabled.current) {
-      scrollToBottom('smooth');
+      scrollToBottom(streamingMsg ? 'auto' : 'smooth');
     }
-  }, [channelMessages.length, selectedImage, selectedFile]);
+  }, [channelMessages.length, streamingTextLength, selectedImage, selectedFile, isAiTyping]);
 
   // Close popovers on outside click
   useEffect(() => {
@@ -2806,25 +2816,25 @@ export default function ChatView() {
 
                               {/* User's Direct Reply */}
                               <div style={{ whiteSpace: 'normal', fontSize: '0.88rem' }}>
-                                {renderFormattedMessageText(
-                                  actualReplyText || msg.text,
-                                  isSelf,
-                                  (url) => setPreviewImage(url),
-                                  false
-                                )}
+                                <AiMessageRenderer
+                                  text={actualReplyText || msg.text || ''}
+                                  isSelf={isSelf}
+                                  isStreaming={Boolean(msg.isStreaming)}
+                                  onImageClick={(url) => setPreviewImage(url)}
+                                />
                               </div>
                             </div>
                           );
                         }
 
-                        return msg.text ? (
+                        return (msg.text || msg.isStreaming) ? (
                           <div style={{ whiteSpace: 'normal' }}>
-                            {renderFormattedMessageText(
-                              msg.text,
-                              isSelf,
-                              (url) => setPreviewImage(url),
-                              false
-                            )}
+                            <AiMessageRenderer
+                              text={msg.text || ''}
+                              isSelf={isSelf}
+                              isStreaming={Boolean(msg.isStreaming)}
+                              onImageClick={(url) => setPreviewImage(url)}
+                            />
                           </div>
                         ) : null;
                       })()}
@@ -2964,55 +2974,103 @@ export default function ChatView() {
                         </div>
                       )}
 
-                      {/* Apple-Style AI Message Controls (Copy response, timestamp) */}
+                      {/* Error & Retry Banner */}
+                      {msg.hasError && (
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px'
+                          }}
+                        >
+                          <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: 600 }}>
+                            ⚠️ {msg.errorMessage || 'Failed to generate response.'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => regenerateAiResponse(msg.id, activeChannelId)}
+                            style={{
+                              background: '#ef4444',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '4px 10px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <RefreshCw style={{ width: '11px', height: '11px' }} />
+                            Retry
+                          </button>
+                        </div>
+                      )}
+
+                      {/* ChatGPT / Meta AI Style Message Controls */}
                       {(isAi || (activeChannel.type === 'ai' && !isSelf)) ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {msg.text && (
-                              <button
-                                type="button"
-                                onClick={() => handleCopyMessage(msg.id, msg.text)}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  background: copiedMsgId === msg.id ? 'var(--color-success-bg)' : 'transparent',
-                                  border: '1px solid var(--border-color)',
-                                  color: copiedMsgId === msg.id ? 'var(--color-success)' : 'var(--text-secondary)',
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  transition: 'all 0.15s ease'
-                                }}
-                                title="Copy AI Response"
-                              >
-                                {copiedMsgId === msg.id ? (
-                                  <>
-                                    <Check style={{ width: '12px', height: '12px' }} />
-                                    <span>Copied!</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy style={{ width: '12px', height: '12px' }} />
-                                    <span>Copy</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
+                        <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid var(--border-color, rgba(0,0,0,0.08))' }}>
+                          <AiMessageActions
+                            message={msg}
+                            isLastMessage={mIdx === currentMessages.length - 1}
+                            isStreaming={Boolean(msg.isStreaming)}
+                            onRegenerate={() => regenerateAiResponse(msg.id, activeChannelId)}
+                            onCopy={(txt) => {
+                              navigator.clipboard.writeText(txt);
+                              setCopiedMsgId(msg.id);
+                              setTimeout(() => setCopiedMsgId(null), 2000);
+                            }}
+                            onFeedback={(msgId, rating) => sendAiFeedback(msgId, activeChannelId, rating)}
+                            onFollowup={(prompt) => {
+                              setMessageInput(prompt);
+                              sendChatMessage(activeChannelId, prompt);
+                            }}
+                          />
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
                             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                               PulseBot AI
                             </span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                              {getTimeAgo(msg.timestamp)}
+                            </span>
                           </div>
-
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                            {getTimeAgo(msg.timestamp)}
-                          </span>
                         </div>
                       ) : (
-                        /* Standard Message Timestamp & Read Receipts */
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', marginTop: '3px', opacity: 0.9 }}>
+                        /* Standard Message Timestamp & Read Receipts & User Edit */
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', marginTop: '3px', opacity: 0.9 }}>
+                          {isSelf && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditUserMessage(msg)}
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.2)',
+                                border: 'none',
+                                color: '#ffffff',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                opacity: hoveredMsgId === msg.id ? 1 : 0.65,
+                                transition: 'opacity 0.15s ease'
+                              }}
+                              title="Edit and resend this prompt"
+                            >
+                              <Edit3 style={{ width: '10px', height: '10px' }} />
+                              <span>Edit</span>
+                            </button>
+                          )}
                           <span style={{ fontSize: '0.65rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)' }}>
                             {getTimeAgo(msg.timestamp)}
                           </span>
@@ -3102,6 +3160,53 @@ export default function ChatView() {
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0369a1' }}>
                 {currentTypers.join(', ')} {currentTypers.length === 1 ? 'is' : 'are'} typing...
               </span>
+            </div>
+          )}
+
+          {/* Subtle ChatGPT / Meta AI Typing Indicator before first token */}
+          {isAiTyping && !channelMessages.some(m => m.isStreaming && m.text) && (
+            <div
+              className="chat-ai-typing-bubble"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                margin: '4px 0',
+                alignSelf: 'flex-start'
+              }}
+            >
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '13px',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)'
+                }}
+              >
+                🤖
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'var(--bg-card, #ffffff)',
+                  padding: '8px 12px',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color, #e2e8f0)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                }}
+              >
+                <span className="ai-typing-dot dot-1" />
+                <span className="ai-typing-dot dot-2" />
+                <span className="ai-typing-dot dot-3" />
+              </div>
             </div>
           )}
 
@@ -3469,6 +3574,80 @@ export default function ChatView() {
                     <button type="button" onClick={() => setSelectedTaskAttach('')} style={{ background: 'none', border: 'none', marginLeft: '4px', cursor: 'pointer', color: '#ef4444' }}>✕</button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Stop Generating Button Banner */}
+            {(isAiTyping || channelMessages.some(m => m.isStreaming)) && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const streamMsg = channelMessages.find(m => m.isStreaming);
+                    stopAiGeneration(streamMsg?.id, activeChannelId);
+                  }}
+                  className="stop-generation-pill"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'var(--bg-card, #ffffff)',
+                    border: '1px solid #ef4444',
+                    borderRadius: '20px',
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#ef4444',
+                    boxShadow: '0 2px 10px rgba(239, 68, 68, 0.2)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#ef4444', display: 'inline-block' }} />
+                  <span>Stop generating</span>
+                </button>
+              </div>
+            )}
+
+            {/* Edit User Message Banner */}
+            {editingMessage && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 12px',
+                  background: 'rgba(2, 132, 199, 0.1)',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '8px',
+                  marginBottom: '8px',
+                  fontSize: '12px',
+                  color: '#0369a1',
+                  fontWeight: 600
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                  <Edit3 style={{ width: '13px', height: '13px', flexShrink: 0 }} />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Editing: "{editingMessage.text?.slice(0, 50)}..."
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    padding: '0 4px',
+                    fontSize: '13px',
+                    fontWeight: 800
+                  }}
+                  title="Cancel edit"
+                >
+                  ✕
+                </button>
               </div>
             )}
 

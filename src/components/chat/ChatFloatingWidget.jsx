@@ -35,6 +35,8 @@ import AiAssistantInfoModal from './AiAssistantInfoModal';
 import LinkedSheetsModal from './LinkedSheetsModal';
 import ProductionTrackingCard from './ProductionTrackingCard';
 import AiTaskDelegationCard from './AiTaskDelegationCard';
+import AiMessageRenderer from './AiMessageRenderer';
+import AiMessageActions from './AiMessageActions';
 import { extractTrackingData, splitMessageIntroAndNotes } from '../../utils/trackingDataParser';
 
 const POPULAR_EMOJIS = [
@@ -821,7 +823,10 @@ export default function ChatFloatingWidget() {
     reactToMessage,
     setViewingUserProfile,
     chatPagination = {},
-    loadMoreMessages
+    loadMoreMessages,
+    stopAiGeneration,
+    regenerateAiResponse,
+    sendAiFeedback
   } = useTaskContext();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -1708,7 +1713,7 @@ export default function ChatFloatingWidget() {
                               <div style={{ whiteSpace: 'normal', width: '100%' }}>
                                 {msg.text ? (
                                   <div style={{ marginBottom: '8px' }}>
-                                    {renderFormattedMessageText(msg.text, isSelf, false)}
+                                    <AiMessageRenderer text={msg.text} isSelf={isSelf} isStreaming={Boolean(msg.isStreaming)} />
                                   </div>
                                 ) : null}
                                 <AiTaskDelegationCard delegatedTask={delegatedTask} isSelf={isSelf} />
@@ -1722,7 +1727,7 @@ export default function ChatFloatingWidget() {
                               <div style={{ whiteSpace: 'normal', width: '100%' }}>
                                 {introText ? (
                                   <div style={{ marginBottom: '6px' }}>
-                                    {renderFormattedMessageText(introText, isSelf, true)}
+                                    <AiMessageRenderer text={introText} isSelf={isSelf} isStreaming={Boolean(msg.isStreaming)} />
                                   </div>
                                 ) : null}
 
@@ -1733,16 +1738,16 @@ export default function ChatFloatingWidget() {
 
                                 {notesText ? (
                                   <div style={{ marginTop: '6px' }}>
-                                    {renderFormattedMessageText(notesText, isSelf, false)}
+                                    <AiMessageRenderer text={notesText} isSelf={isSelf} isStreaming={Boolean(msg.isStreaming)} />
                                   </div>
                                 ) : null}
                               </div>
                             );
                           }
 
-                          return msg.text ? (
+                          return (msg.text || msg.isStreaming) ? (
                             <div style={{ whiteSpace: 'normal' }}>
-                              {renderFormattedMessageText(msg.text, isSelf, false)}
+                              <AiMessageRenderer text={msg.text || ''} isSelf={isSelf} isStreaming={Boolean(msg.isStreaming)} />
                             </div>
                           ) : null;
                         })()}
@@ -1830,6 +1835,23 @@ export default function ChatFloatingWidget() {
                           </div>
                         )}
                       </div>
+
+                      {/* ChatGPT / Meta AI Style Message Controls for Widget */}
+                      {(msg.isAi || (activeChannel?.type === 'ai' && !isSelf)) && !msg.isStreaming && (
+                        <div style={{ marginTop: '3px' }}>
+                          <AiMessageActions
+                            message={msg}
+                            isLastMessage={mIdx === currentMessages.length - 1}
+                            isStreaming={Boolean(msg.isStreaming)}
+                            onRegenerate={() => regenerateAiResponse(msg.id, activeChannelId)}
+                            onFeedback={(msgId, rating) => sendAiFeedback(msgId, activeChannelId, rating)}
+                            onFollowup={(prompt) => {
+                              setInputText(prompt);
+                              sendChatMessage(activeChannelId, prompt);
+                            }}
+                          />
+                        </div>
+                      )}
 
                       {/* Reaction Pills */}
                       {hasReactions && (

@@ -798,6 +798,140 @@ export const TaskProvider = ({ children }) => {
       loadStatusFeed(activeUser?.id);
     };
 
+    // ====================================================================
+    // Real-Time AI Chatbot Progressive Streaming Handlers (ChatGPT Style)
+    // ====================================================================
+    const handleAiStreamStart = ({ messageId, channelId, prompt }) => {
+      if (channelId && channelId.startsWith('chan-ai-') && activeUser?.id && channelId !== `chan-ai-${activeUser.id}`) {
+        return;
+      }
+      setIsAiTyping(true);
+      setChatMessages(prev => {
+        const list = prev[channelId] || [];
+        if (list.some(m => m.id === messageId)) return prev;
+        const streamPlaceholder = {
+          id: messageId,
+          channelId,
+          senderId: 'pulse-bot',
+          senderName: 'PulseBot AI (Gemini)',
+          senderAvatar: '🤖',
+          senderRole: 'AI Assistant',
+          text: '',
+          isAi: true,
+          isStreaming: true,
+          timestamp: new Date().toISOString()
+        };
+        return {
+          ...prev,
+          [channelId]: [...list, streamPlaceholder]
+        };
+      });
+    };
+
+    const handleAiStreamChunk = ({ messageId, channelId, chunk, fullText }) => {
+      if (channelId && channelId.startsWith('chan-ai-') && activeUser?.id && channelId !== `chan-ai-${activeUser.id}`) {
+        return;
+      }
+      setIsAiTyping(false); // Typing dots disappear as soon as stream text begins
+      setChatMessages(prev => {
+        const list = prev[channelId] || [];
+        const idx = list.findIndex(m => m.id === messageId);
+        if (idx !== -1) {
+          const updated = [...list];
+          updated[idx] = {
+            ...updated[idx],
+            text: fullText,
+            isStreaming: true
+          };
+          return { ...prev, [channelId]: updated };
+        }
+        // If start was missed, add it
+        return {
+          ...prev,
+          [channelId]: [
+            ...list,
+            {
+              id: messageId,
+              channelId,
+              senderId: 'pulse-bot',
+              senderName: 'PulseBot AI (Gemini)',
+              senderAvatar: '🤖',
+              senderRole: 'AI Assistant',
+              text: fullText,
+              isAi: true,
+              isStreaming: true,
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+      });
+    };
+
+    const handleAiStreamEnd = ({ messageId, channelId, finalMessage }) => {
+      if (channelId && channelId.startsWith('chan-ai-') && activeUser?.id && channelId !== `chan-ai-${activeUser.id}`) {
+        return;
+      }
+      setIsAiTyping(false);
+      setChatMessages(prev => {
+        const list = prev[channelId] || [];
+        const idx = list.findIndex(m => m.id === messageId);
+        if (idx !== -1) {
+          const updated = [...list];
+          updated[idx] = {
+            ...updated[idx],
+            ...finalMessage,
+            isStreaming: false
+          };
+          return { ...prev, [channelId]: updated };
+        }
+        return {
+          ...prev,
+          [channelId]: [...list, { ...finalMessage, isStreaming: false }]
+        };
+      });
+    };
+
+    const handleAiStreamStopped = ({ messageId, channelId }) => {
+      setIsAiTyping(false);
+      if (channelId) {
+        setChatMessages(prev => {
+          const list = prev[channelId] || [];
+          const idx = list.findIndex(m => m.id === messageId);
+          if (idx !== -1) {
+            const updated = [...list];
+            updated[idx] = {
+              ...updated[idx],
+              isStreaming: false,
+              isStopped: true
+            };
+            return { ...prev, [channelId]: updated };
+          }
+          return prev;
+        });
+      }
+    };
+
+    const handleAiStreamError = ({ messageId, channelId, error }) => {
+      setIsAiTyping(false);
+      if (channelId) {
+        setChatMessages(prev => {
+          const list = prev[channelId] || [];
+          const idx = list.findIndex(m => m.id === messageId);
+          if (idx !== -1) {
+            const updated = [...list];
+            updated[idx] = {
+              ...updated[idx],
+              isStreaming: false,
+              hasError: true,
+              errorMessage: error || 'Failed to generate response.'
+            };
+            return { ...prev, [channelId]: updated };
+          }
+          return prev;
+        });
+      }
+    };
+
     s.on('task:created', handleTaskCreated);
     s.on('task:updated', handleTaskUpdated);
     s.on('task:deleted', handleTaskDeleted);
@@ -811,6 +945,11 @@ export const TaskProvider = ({ children }) => {
     s.on('status:created', handleStatusCreated);
     s.on('status:viewed', handleStatusViewed);
     s.on('status:deleted', handleStatusDeleted);
+    s.on('ai:stream:start', handleAiStreamStart);
+    s.on('ai:stream:chunk', handleAiStreamChunk);
+    s.on('ai:stream:end', handleAiStreamEnd);
+    s.on('ai:stream:stopped', handleAiStreamStopped);
+    s.on('ai:stream:error', handleAiStreamError);
 
     return () => {
       s.off('task:created', handleTaskCreated);
@@ -826,6 +965,11 @@ export const TaskProvider = ({ children }) => {
       s.off('status:created', handleStatusCreated);
       s.off('status:viewed', handleStatusViewed);
       s.off('status:deleted', handleStatusDeleted);
+      s.off('ai:stream:start', handleAiStreamStart);
+      s.off('ai:stream:chunk', handleAiStreamChunk);
+      s.off('ai:stream:end', handleAiStreamEnd);
+      s.off('ai:stream:stopped', handleAiStreamStopped);
+      s.off('ai:stream:error', handleAiStreamError);
     };
   }, [activeUserId, activeChannelId]);
 
@@ -2540,6 +2684,60 @@ export const TaskProvider = ({ children }) => {
     });
   };
 
+  const stopAiGeneration = (messageId, channelId) => {
+    setIsAiTyping(false);
+    const s = getSocket();
+    if (s) {
+      s.emit('chat:stop_generation', { messageId, channelId });
+    }
+    if (channelId) {
+      setChatMessages(prev => {
+        const list = prev[channelId] || [];
+        return {
+          ...prev,
+          [channelId]: list.map(m => m.id === messageId ? { ...m, isStreaming: false, isStopped: true } : m)
+        };
+      });
+    }
+  };
+
+  const regenerateAiResponse = (messageId, channelId) => {
+    const list = chatMessages[channelId] || [];
+    const idx = list.findIndex(m => m.id === messageId);
+    let promptToRetry = '';
+    let imageToRetry = null;
+
+    if (idx > 0) {
+      for (let i = idx - 1; i >= 0; i--) {
+        if (!list[i].isAi) {
+          promptToRetry = list[i].text || '';
+          imageToRetry = list[i].imageUrl || null;
+          break;
+        }
+      }
+    }
+    if (!promptToRetry && list[idx]?.retryPrompt) {
+      promptToRetry = list[idx].retryPrompt;
+    }
+    if (promptToRetry) {
+      generatePulseBotAiReply(promptToRetry, imageToRetry, null, false, channelId);
+    }
+  };
+
+  const sendAiFeedback = (messageId, channelId, rating) => {
+    const s = getSocket();
+    if (s) {
+      s.emit('chat:message_feedback', { messageId, channelId, rating });
+    }
+    setChatMessages(prev => {
+      const list = prev[channelId] || [];
+      return {
+        ...prev,
+        [channelId]: list.map(m => m.id === messageId ? { ...m, feedbackRating: rating } : m)
+      };
+    });
+  };
+
 
   const toggleAutomation = (ruleId) => {
     setAutomations(prev =>
@@ -2676,6 +2874,10 @@ export const TaskProvider = ({ children }) => {
         deleteEaDailyTask,
         isBackendConnected,
         isAiTyping,
+        generatePulseBotAiReply,
+        stopAiGeneration,
+        regenerateAiResponse,
+        sendAiFeedback,
         realtimeToasts,
         dismissRealtimeToast,
         triggerRealtimeToast,
