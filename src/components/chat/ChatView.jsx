@@ -654,6 +654,18 @@ const formatInlineTokens = (line, isSelf, onImageClick = null, suppressImages = 
 // AI Assistant Suggested Prompts (Apple Intelligence Experience)
 const AI_SUGGESTED_PROMPTS = [
   {
+    icon: '⚖️',
+    title: 'Accessory Weight & Trims',
+    desc: 'Verify gross/tare machine weight, lot trim orders, and piece counts.',
+    prompt: 'Lot 11028 ka weight capture aur accessory data check karo'
+  },
+  {
+    icon: '📦',
+    title: 'Material Stock & Inventory',
+    desc: 'Check inventory stock, threshold alerts, and store rack locations.',
+    prompt: 'Accessory materials stock report'
+  },
+  {
     icon: '📅',
     title: 'Help me organize my day.',
     desc: 'Review pending tasks, high-priority deadlines, and schedule.',
@@ -678,6 +690,7 @@ const AI_SUGGESTED_PROMPTS = [
     prompt: 'Help me brainstorm practical strategies to optimize supervisor turnaround times and resolve overdue tasks.'
   }
 ];
+
 
 // macOS-style code block with traffic lights and copy button
 const AppleCodeBlock = ({ code, language = 'text' }) => {
@@ -2321,6 +2334,27 @@ export default function ChatView() {
             >
               📊 Linked Sheets Hub (8)
             </button>
+            <button
+              onClick={() => handleQuickAiPrompt('Accessory software database status and table counts')}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', background: 'rgba(124, 58, 237, 0.1)', borderColor: 'rgba(124, 58, 237, 0.3)', color: '#7c3aed', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}
+            >
+              🧵 Accessory SQL: Live
+            </button>
+            <button
+              onClick={() => handleQuickAiPrompt('Lot 11028 ka weight capture aur accessory data check karo')}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', flexShrink: 0, whiteSpace: 'nowrap' }}
+            >
+              ⚖️ Lot 11028 Weight & Trims
+            </button>
+            <button
+              onClick={() => handleQuickAiPrompt('Accessory materials stock report')}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', flexShrink: 0, whiteSpace: 'nowrap' }}
+            >
+              📦 Material Stock
+            </button>
             <button onClick={() => handleQuickAiPrompt('How many lots of SS and how many are cut or pending?')} className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
               ✂️ SS 331 Lots & Cutting Status
             </button>
@@ -2333,6 +2367,7 @@ export default function ChatView() {
             <button onClick={() => handleQuickAiPrompt('Show all tasks pending supervisor approval')} className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
               📋 Pending Approvals
             </button>
+
           </div>
         )}
 

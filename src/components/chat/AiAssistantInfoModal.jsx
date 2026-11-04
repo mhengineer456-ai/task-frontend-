@@ -129,10 +129,14 @@ export default function AiAssistantInfoModal({ onClose, activeUser, onOpenLinked
             <FileSpreadsheet style={{ width: '14px', height: '14px' }} />
             <span>8 Linked Sheets (Read-Only)</span>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#7c3aed', fontWeight: 700 }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8b5cf6' }} />
+            <span>Accessory SQL: Linked (newdata)</span>
+          </div>
         </div>
 
         {/* Linked Google Sheets Card */}
-        <div style={{ padding: '1rem 1.75rem 0.5rem 1.75rem' }}>
+        <div style={{ padding: '1rem 1.75rem 0.4rem 1.75rem' }}>
           <div
             style={{
               background: '#f0fdf4',
@@ -187,8 +191,49 @@ export default function AiAssistantInfoModal({ onClose, activeUser, onOpenLinked
           </div>
         </div>
 
+        {/* Linked Accessory Software Database Card */}
+        <div style={{ padding: '0.4rem 1.75rem 0.5rem 1.75rem' }}>
+          <div
+            style={{
+              background: '#faf5ff',
+              borderRadius: '12px',
+              border: '1px solid #e9d5ff',
+              padding: '0.85rem 1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem'
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '1rem' }}>⚖️</span>
+                <strong style={{ fontSize: '0.84rem', color: '#6b21a8' }}>
+                  Accessory Software SQL Database (Live)
+                </strong>
+              </div>
+              <p style={{ fontSize: '0.74rem', color: '#475569', margin: '3px 0 0 0' }}>
+                Secondary SQL link to <strong>weight_capture</strong> (gross/tare), <strong>materials</strong> inventory, <strong>issue_logs</strong>, and trims (zip & dori).
+              </p>
+            </div>
+            <span
+              style={{
+                background: '#7c3aed',
+                color: '#ffffff',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                flexShrink: 0
+              }}
+            >
+              🟢 Live SQL
+            </span>
+          </div>
+        </div>
+
         {/* Capabilities list */}
-        <div style={{ padding: '1rem 1.75rem 1.5rem 1.75rem' }}>
+        <div style={{ padding: '0.75rem 1.75rem 1.5rem 1.75rem' }}>
           <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
             Core AI Capabilities
           </h4>
@@ -198,6 +243,14 @@ export default function AiAssistantInfoModal({ onClose, activeUser, onOpenLinked
               <div>
                 <strong style={{ fontSize: '0.82rem', color: '#0369a1', display: 'block' }}>Live Cutting Status & Lot Intelligence</strong>
                 <span style={{ fontSize: '0.75rem', color: '#475569' }}>Verified against Index Sheet (sole authority for Cut vs Pending) with instant karigar & fabric details.</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', background: '#fdf4ff', padding: '0.75rem', borderRadius: '10px', border: '1px solid #f5d0fe' }}>
+              <span style={{ fontSize: '1rem', marginTop: '1px', flexShrink: 0 }}>🧵</span>
+              <div>
+                <strong style={{ fontSize: '0.82rem', color: '#a21caf', display: 'block' }}>Accessory & Weigh-In Ground Truth</strong>
+                <span style={{ fontSize: '0.75rem', color: '#475569' }}>Real-time scale weight (gross/tare/net), weight per piece, issue logs by supervisor, and trim inventory cross-checked by lot number.</span>
               </div>
             </div>
 
@@ -218,6 +271,7 @@ export default function AiAssistantInfoModal({ onClose, activeUser, onOpenLinked
             </div>
           </div>
         </div>
+
 
         {/* Footer */}
         <div style={{ padding: '1rem 1.75rem', background: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
