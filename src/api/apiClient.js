@@ -1,4 +1,8 @@
-const rawUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+const defaultUrl = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+  ? window.location.origin
+  : 'http://localhost:5000';
+
+const rawUrl = (import.meta.env.VITE_API_URL || defaultUrl).trim().replace(/\/+$/, '');
 let normalizedUrl = rawUrl;
 if (!/^https?:\/\//i.test(normalizedUrl)) {
   normalizedUrl = `https://${normalizedUrl}`;
