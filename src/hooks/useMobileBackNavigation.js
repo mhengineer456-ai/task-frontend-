@@ -27,6 +27,18 @@ export function useMobileBackNavigation({
   setIsMobileMenuOpen,
   isRegisterModalOpen,
   setIsRegisterModalOpen,
+  isCreateMenuOpen,
+  setIsCreateMenuOpen,
+  isReminderModalOpen,
+  setIsReminderModalOpen,
+  isTrackTimeModalOpen,
+  setIsTrackTimeModalOpen,
+  isDocModalOpen,
+  setIsDocModalOpen,
+  isNoteModalOpen,
+  setIsNoteModalOpen,
+  isListModalOpen,
+  setIsListModalOpen,
 }) {
   const isPoppingRef = useRef(false);
   const activeModalRef = useRef(null);
@@ -36,6 +48,18 @@ export function useMobileBackNavigation({
     ? 'userProfile'
     : selectedTaskId
     ? 'taskDetail'
+    : isCreateMenuOpen
+    ? 'createMenu'
+    : isReminderModalOpen
+    ? 'reminderModal'
+    : isTrackTimeModalOpen
+    ? 'trackTimeModal'
+    : isDocModalOpen
+    ? 'docModal'
+    : isNoteModalOpen
+    ? 'noteModal'
+    : isListModalOpen
+    ? 'listModal'
     : (isCreateModalOpen || editingTask)
     ? 'taskForm'
     : isNotificationsOpen
@@ -103,6 +127,12 @@ export function useMobileBackNavigation({
         if (isNotificationsOpen && setIsNotificationsOpen) setIsNotificationsOpen(false);
         if (isMobileMenuOpen && setIsMobileMenuOpen) setIsMobileMenuOpen(false);
         if (isRegisterModalOpen && setIsRegisterModalOpen) setIsRegisterModalOpen(false);
+        if (isCreateMenuOpen && setIsCreateMenuOpen) setIsCreateMenuOpen(false);
+        if (isReminderModalOpen && setIsReminderModalOpen) setIsReminderModalOpen(false);
+        if (isTrackTimeModalOpen && setIsTrackTimeModalOpen) setIsTrackTimeModalOpen(false);
+        if (isDocModalOpen && setIsDocModalOpen) setIsDocModalOpen(false);
+        if (isNoteModalOpen && setIsNoteModalOpen) setIsNoteModalOpen(false);
+        if (isListModalOpen && setIsListModalOpen) setIsListModalOpen(false);
         activeModalRef.current = null;
         return;
       }

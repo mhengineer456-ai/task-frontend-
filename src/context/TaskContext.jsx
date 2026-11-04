@@ -6,6 +6,7 @@ import { userService } from '../api/userService';
 import { authService } from '../api/authService';
 import { chatService } from '../api/chatService';
 import { statusService } from '../api/statusService';
+import { workspaceService } from '../api/workspaceService';
 import { BASE_URL } from '../api/apiClient';
 import { initSocket, getSocket, joinUser, joinChannel, leaveChannel, sendTypingStatus } from '../api/socket';
 import {
@@ -159,6 +160,21 @@ export const TaskProvider = ({ children }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Universal Create Action Hub & Workspace Modals
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [isTrackTimeModalOpen, setIsTrackTimeModalOpen] = useState(false);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
+
+  // Workspace Data Collections
+  const [reminders, setReminders] = useState(() => safeGetLocalStorage('taskpulse_reminders', []));
+  const [timeLogs, setTimeLogs] = useState(() => safeGetLocalStorage('taskpulse_time_logs', []));
+  const [documents, setDocuments] = useState(() => safeGetLocalStorage('taskpulse_documents', []));
+  const [notes, setNotes] = useState(() => safeGetLocalStorage('taskpulse_notes', []));
+  const [customLists, setCustomLists] = useState(() => safeGetLocalStorage('taskpulse_custom_lists', []));
 
   // Device Mode: 'mobile' vs 'web'
   const [deviceMode, setDeviceModeState] = useState(() => {
@@ -369,8 +385,74 @@ export const TaskProvider = ({ children }) => {
           }
         })
         .catch(() => {});
+
+      // Fetch Workspace collections
+      workspaceService.getReminders(activeUserId)
+        .then(res => {
+          if (res?.success && Array.isArray(res.reminders)) {
+            setReminders(res.reminders);
+            safeSetLocalStorage('taskpulse_reminders', res.reminders);
+          }
+        })
+        .catch(() => {});
+
+      workspaceService.getTimeLogs({ userId: activeUserId })
+        .then(res => {
+          if (res?.success && Array.isArray(res.timeLogs)) {
+            setTimeLogs(res.timeLogs);
+            safeSetLocalStorage('taskpulse_time_logs', res.timeLogs);
+          }
+        })
+        .catch(() => {});
+
+      workspaceService.getDocuments()
+        .then(res => {
+          if (res?.success && Array.isArray(res.documents)) {
+            setDocuments(res.documents);
+            safeSetLocalStorage('taskpulse_documents', res.documents);
+          }
+        })
+        .catch(() => {});
+
+      workspaceService.getNotes(activeUserId)
+        .then(res => {
+          if (res?.success && Array.isArray(res.notes)) {
+            setNotes(res.notes);
+            safeSetLocalStorage('taskpulse_notes', res.notes);
+          }
+        })
+        .catch(() => {});
+
+      workspaceService.getLists(activeUserId)
+        .then(res => {
+          if (res?.success && Array.isArray(res.lists)) {
+            setCustomLists(res.lists);
+            safeSetLocalStorage('taskpulse_custom_lists', res.lists);
+          }
+        })
+        .catch(() => {});
     }
   }, [activeUserId]);
+
+  useEffect(() => {
+    safeSetLocalStorage('taskpulse_reminders', reminders);
+  }, [reminders]);
+
+  useEffect(() => {
+    safeSetLocalStorage('taskpulse_time_logs', timeLogs);
+  }, [timeLogs]);
+
+  useEffect(() => {
+    safeSetLocalStorage('taskpulse_documents', documents);
+  }, [documents]);
+
+  useEffect(() => {
+    safeSetLocalStorage('taskpulse_notes', notes);
+  }, [notes]);
+
+  useEffect(() => {
+    safeSetLocalStorage('taskpulse_custom_lists', customLists);
+  }, [customLists]);
 
   useEffect(() => {
     safeSetLocalStorage('taskpulse_leaves', leaves);
@@ -1690,6 +1772,234 @@ export const TaskProvider = ({ children }) => {
     addAuditLog('EA_DAILY_TASK_DELETED', `EA deleted daily routine task "${taskId}"`);
   };
 
+  // ==========================================
+  // WORKSPACE PRODUCTIVITY ACTION HANDLERS
+  // ==========================================
+
+  const createReminder = async (reminderData) => {
+    const tempReminder = {
+      id: `rem-${Date.now()}`,
+      userId: activeUser?.id || 'usr-1',
+      userName: activeUser?.name || 'User',
+      status: 'Pending',
+      createdAt: new Date().toISOString(),
+      ...reminderData
+    };
+    setReminders(prev => [tempReminder, ...prev]);
+
+    triggerRealtimeToast({
+      title: '⏰ Reminder Set',
+      message: `${tempReminder.title} (Due: ${tempReminder.dueDate} at ${tempReminder.dueTime || '09:00'})`,
+      type: 'info'
+    });
+
+    try {
+      const res = await workspaceService.createReminder(reminderData);
+      if (res?.success && res.reminder) {
+        setReminders(prev => prev.map(r => r.id === tempReminder.id ? res.reminder : r));
+      }
+    } catch (e) {
+      console.warn('API create reminder fallback:', e);
+    }
+  };
+
+  const toggleReminderStatus = async (id, status) => {
+    setReminders(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    try {
+      await workspaceService.toggleReminderStatus(id, status);
+    } catch (e) {
+      console.warn('API toggle reminder status fallback:', e);
+    }
+  };
+
+  const deleteReminder = async (id) => {
+    setReminders(prev => prev.filter(r => r.id !== id));
+    try {
+      await workspaceService.deleteReminder(id);
+    } catch (e) {
+      console.warn('API delete reminder fallback:', e);
+    }
+  };
+
+  const createTimeLog = async (logData) => {
+    const tempLog = {
+      id: `tim-${Date.now()}`,
+      userId: activeUser?.id || 'usr-1',
+      userName: activeUser?.name || 'User',
+      createdAt: new Date().toISOString(),
+      ...logData
+    };
+    setTimeLogs(prev => [tempLog, ...prev]);
+
+    // Update actual_hours on local task state immediately
+    if (logData.taskId && logData.hours) {
+      setTasks(prev => prev.map(t => {
+        if (t.id === logData.taskId) {
+          const newActual = Number(((Number(t.actualHours) || 0) + Number(logData.hours)).toFixed(2));
+          return { ...t, actualHours: newActual };
+        }
+        return t;
+      }));
+    }
+
+    triggerRealtimeToast({
+      title: '⏱️ Time Recorded',
+      message: `Logged ${logData.hours}h on "${logData.taskTitle || 'Task'}"`,
+      type: 'success'
+    });
+
+    try {
+      const res = await workspaceService.createTimeLog(logData);
+      if (res?.success && res.timeLog) {
+        setTimeLogs(prev => prev.map(l => l.id === tempLog.id ? res.timeLog : l));
+      }
+    } catch (e) {
+      console.warn('API create time log fallback:', e);
+    }
+  };
+
+  const deleteTimeLog = async (id) => {
+    setTimeLogs(prev => prev.filter(l => l.id !== id));
+    try {
+      await workspaceService.deleteTimeLog(id);
+    } catch (e) {
+      console.warn('API delete time log fallback:', e);
+    }
+  };
+
+  const createDocument = async (docData) => {
+    const tempDoc = {
+      id: `doc-${Date.now()}`,
+      userId: activeUser?.id || 'usr-1',
+      authorName: activeUser?.name || 'User',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...docData
+    };
+    setDocuments(prev => [tempDoc, ...prev]);
+
+    triggerRealtimeToast({
+      title: '📄 Document Published',
+      message: `"${tempDoc.title}" published in ${tempDoc.category}`,
+      type: 'success'
+    });
+
+    try {
+      const res = await workspaceService.createDocument(docData);
+      if (res?.success && res.document) {
+        setDocuments(prev => prev.map(d => d.id === tempDoc.id ? res.document : d));
+      }
+    } catch (e) {
+      console.warn('API create document fallback:', e);
+    }
+  };
+
+  const updateDocument = async (id, updates) => {
+    setDocuments(prev => prev.map(d => d.id === id ? { ...d, ...updates, updatedAt: new Date().toISOString() } : d));
+    try {
+      await workspaceService.updateDocument(id, updates);
+    } catch (e) {
+      console.warn('API update document fallback:', e);
+    }
+  };
+
+  const deleteDocument = async (id) => {
+    setDocuments(prev => prev.filter(d => d.id !== id));
+    try {
+      await workspaceService.deleteDocument(id);
+    } catch (e) {
+      console.warn('API delete document fallback:', e);
+    }
+  };
+
+  const createNote = async (noteData) => {
+    const tempNote = {
+      id: `not-${Date.now()}`,
+      userId: activeUser?.id || 'usr-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...noteData
+    };
+    setNotes(prev => [tempNote, ...prev]);
+
+    triggerRealtimeToast({
+      title: '📝 Note Saved',
+      message: `"${tempNote.title}" saved to your scratchpad`,
+      type: 'info'
+    });
+
+    try {
+      const res = await workspaceService.createNote(noteData);
+      if (res?.success && res.note) {
+        setNotes(prev => prev.map(n => n.id === tempNote.id ? res.note : n));
+      }
+    } catch (e) {
+      console.warn('API create note fallback:', e);
+    }
+  };
+
+  const updateNote = async (id, updates) => {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n));
+    try {
+      await workspaceService.updateNote(id, updates);
+    } catch (e) {
+      console.warn('API update note fallback:', e);
+    }
+  };
+
+  const deleteNote = async (id) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+    try {
+      await workspaceService.deleteNote(id);
+    } catch (e) {
+      console.warn('API delete note fallback:', e);
+    }
+  };
+
+  const createCustomList = async (listData) => {
+    const tempList = {
+      id: `lst-${Date.now()}`,
+      userId: activeUser?.id || 'usr-1',
+      createdAt: new Date().toISOString(),
+      ...listData
+    };
+    setCustomLists(prev => [tempList, ...prev]);
+
+    triggerRealtimeToast({
+      title: '📋 Custom List Created',
+      message: `"${tempList.name}" is ready`,
+      type: 'success'
+    });
+
+    try {
+      const res = await workspaceService.createList(listData);
+      if (res?.success && res.list) {
+        setCustomLists(prev => prev.map(l => l.id === tempList.id ? res.list : l));
+      }
+    } catch (e) {
+      console.warn('API create list fallback:', e);
+    }
+  };
+
+  const updateCustomList = async (id, updates) => {
+    setCustomLists(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+    try {
+      await workspaceService.updateList(id, updates);
+    } catch (e) {
+      console.warn('API update list fallback:', e);
+    }
+  };
+
+  const deleteCustomList = async (id) => {
+    setCustomLists(prev => prev.filter(l => l.id !== id));
+    try {
+      await workspaceService.deleteList(id);
+    } catch (e) {
+      console.warn('API delete list fallback:', e);
+    }
+  };
+
+
   const login = async (email, password, quickUserId = null) => {
     try {
       const res = await authService.login(email, password, quickUserId);
@@ -2403,8 +2713,42 @@ export const TaskProvider = ({ children }) => {
         saveStatusPrivacy,
         sendStatusReply,
         openStatusStory,
-        closeStatusStory
+        closeStatusStory,
+        // Universal Create Hub & Workspace Modals
+        isCreateMenuOpen,
+        setIsCreateMenuOpen,
+        isReminderModalOpen,
+        setIsReminderModalOpen,
+        isTrackTimeModalOpen,
+        setIsTrackTimeModalOpen,
+        isDocModalOpen,
+        setIsDocModalOpen,
+        isNoteModalOpen,
+        setIsNoteModalOpen,
+        isListModalOpen,
+        setIsListModalOpen,
+        // Workspace Collections & Handlers
+        reminders,
+        timeLogs,
+        documents,
+        notes,
+        customLists,
+        createReminder,
+        toggleReminderStatus,
+        deleteReminder,
+        createTimeLog,
+        deleteTimeLog,
+        createDocument,
+        updateDocument,
+        deleteDocument,
+        createNote,
+        updateNote,
+        deleteNote,
+        createCustomList,
+        updateCustomList,
+        deleteCustomList
       }}
+
 
     >
       {children}

@@ -23,7 +23,8 @@ import {
   Sliders,
   ChevronDown,
   UserCheck,
-  CircleDot
+  CircleDot,
+  Layers
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -94,7 +95,8 @@ export default function Sidebar() {
           icon: CheckSquare,
           badge: pendingApprovalsCount > 0 ? pendingApprovalsCount : null,
           badgeClass: 'badge-amber'
-        }
+        },
+        { id: 'workspace', label: 'Docs & Workspace Hub', icon: Layers }
       ]
     },
     {

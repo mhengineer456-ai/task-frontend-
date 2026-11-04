@@ -34,6 +34,8 @@ export default function MobileBottomNav() {
     leaves,
     isCreateModalOpen,
     setIsCreateModalOpen,
+    isCreateMenuOpen,
+    setIsCreateMenuOpen,
     editingTask,
     selectedTaskId,
     viewingUserProfile,
@@ -65,6 +67,7 @@ export default function MobileBottomNav() {
 
   const isModalOrDrawerActive =
     isCreateModalOpen ||
+    isCreateMenuOpen ||
     !!editingTask ||
     !!selectedTaskId ||
     isMoreSheetOpen ||
@@ -81,20 +84,21 @@ export default function MobileBottomNav() {
     'alltasks',
     'kanban',
     'calendar',
-    'timeline'
+    'timeline',
+    'workspace'
   ];
 
   const shouldShowFab = !isModalOrDrawerActive && fabAllowedViews.includes(activeView);
 
   return (
     <>
-      {/* Floating Action Button for Rapid Task Creation (strictly hidden on chat & non-task views) */}
+      {/* Floating Action Button for Create Action Hub */}
       {shouldShowFab && (
         <button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => setIsCreateMenuOpen(true)}
           className="mobile-fab"
-          title="Create New Task"
-          aria-label="Create New Task"
+          title="Create New Action (Task, Reminder, Time, Doc, Note, List)"
+          aria-label="Create New Action"
         >
           <Plus style={{ width: '24px', height: '24px', color: '#ffffff' }} />
         </button>
@@ -283,6 +287,13 @@ export default function MobileBottomNav() {
                   <Zap style={{ width: '20px', height: '20px' }} />
                 </div>
                 <span>Automations</span>
+              </button>
+
+              <button onClick={() => handleNavClick('workspace')} className="mobile-sheet-grid-item">
+                <div className="grid-icon-circle" style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1' }}>
+                  <Layers style={{ width: '20px', height: '20px' }} />
+                </div>
+                <span>Workspace Hub</span>
               </button>
 
               <button onClick={() => handleNavClick('settings')} className="mobile-sheet-grid-item">

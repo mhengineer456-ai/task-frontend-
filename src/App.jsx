@@ -33,6 +33,13 @@ import { Monitor } from 'lucide-react';
 import { useMobileBackNavigation } from './hooks/useMobileBackNavigation';
 import { CallProvider } from './context/CallContext';
 import CallOverlayModal from './components/call/CallOverlayModal';
+import CreateActionMenuModal from './components/workspace/CreateActionMenuModal';
+import ReminderModal from './components/workspace/ReminderModal';
+import TrackTimeModal from './components/workspace/TrackTimeModal';
+import DocModal from './components/workspace/DocModal';
+import NoteModal from './components/workspace/NoteModal';
+import ListModal from './components/workspace/ListModal';
+import WorkspaceHubView from './components/workspace/WorkspaceHubView';
 
 function MainLayout() {
   const {
@@ -54,7 +61,19 @@ function MainLayout() {
     setIsMobileMenuOpen,
     deviceMode,
     setDeviceMode,
-    isMobileView
+    isMobileView,
+    isCreateMenuOpen,
+    setIsCreateMenuOpen,
+    isReminderModalOpen,
+    setIsReminderModalOpen,
+    isTrackTimeModalOpen,
+    setIsTrackTimeModalOpen,
+    isDocModalOpen,
+    setIsDocModalOpen,
+    isNoteModalOpen,
+    setIsNoteModalOpen,
+    isListModalOpen,
+    setIsListModalOpen
   } = useTaskContext();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -76,7 +95,19 @@ function MainLayout() {
     isMobileMenuOpen,
     setIsMobileMenuOpen,
     isRegisterModalOpen,
-    setIsRegisterModalOpen
+    setIsRegisterModalOpen,
+    isCreateMenuOpen,
+    setIsCreateMenuOpen,
+    isReminderModalOpen,
+    setIsReminderModalOpen,
+    isTrackTimeModalOpen,
+    setIsTrackTimeModalOpen,
+    isDocModalOpen,
+    setIsDocModalOpen,
+    isNoteModalOpen,
+    setIsNoteModalOpen,
+    isListModalOpen,
+    setIsListModalOpen
   });
 
   // Automatically close any slide-over drawers when navigating between views
@@ -147,6 +178,7 @@ function MainLayout() {
           {activeView === 'reports' && <ReportsView />}
           {activeView === 'audit' && <AuditLogsView />}
           {activeView === 'settings' && <SettingsView />}
+          {activeView === 'workspace' && <WorkspaceHubView />}
 
           {/* Guaranteed Safe Clearance Spacer on Mobile (only for scrollable pages, NOT fixed-dock chat) */}
           {isMobileView && activeView !== 'chat' && (
@@ -193,6 +225,37 @@ function MainLayout() {
       <TaskDetailDrawer
         taskId={selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
+      />
+
+      {/* Universal Create Action Hub & Workspace Modals */}
+      <CreateActionMenuModal
+        isOpen={isCreateMenuOpen}
+        onClose={() => setIsCreateMenuOpen(false)}
+      />
+
+      <ReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+      />
+
+      <TrackTimeModal
+        isOpen={isTrackTimeModalOpen}
+        onClose={() => setIsTrackTimeModalOpen(false)}
+      />
+
+      <DocModal
+        isOpen={isDocModalOpen}
+        onClose={() => setIsDocModalOpen(false)}
+      />
+
+      <NoteModal
+        isOpen={isNoteModalOpen}
+        onClose={() => setIsNoteModalOpen(false)}
+      />
+
+      <ListModal
+        isOpen={isListModalOpen}
+        onClose={() => setIsListModalOpen(false)}
       />
     </div>
   );

@@ -44,6 +44,7 @@ export default function Header({ onOpenNotifications }) {
     accentTheme,
     setAccentTheme,
     setIsCreateModalOpen,
+    setIsCreateMenuOpen,
     setSelectedTaskId,
     activeTimer,
     pauseTimer,
@@ -465,9 +466,9 @@ export default function Header({ onOpenNotifications }) {
             </button>
           )}
 
-          {/* "+ New Task" Button */}
+          {/* "+ Create" Action Hub Button */}
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => setIsCreateMenuOpen(true)}
             className="btn btn-primary header-btn-responsive"
             style={{
               padding: '6px 14px',
@@ -479,10 +480,10 @@ export default function Header({ onOpenNotifications }) {
               gap: '6px',
               fontWeight: 800
             }}
-            title="Create a new task (Hotkey: C)"
+            title="Create Task, Reminder, Track Time, Doc, Note, or List (Hotkey: C)"
           >
             <Plus style={{ width: '16px', height: '16px', color: '#ffffff' }} />
-            <span className="header-label-tablet">New Task</span>
+            <span className="header-label-tablet">Create</span>
           </button>
 
           {/* Accent Color Palette Customizer */}
