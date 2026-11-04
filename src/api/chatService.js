@@ -48,6 +48,20 @@ export const chatService = {
 
   async toggleReaction(messageId, emoji, userId, userName) {
     return await apiClient.post(`/chat/messages/${messageId}/reaction`, { emoji, userId, userName });
+  },
+
+  async deleteMessage(messageId, channelId) {
+    const query = channelId ? `?channelId=${encodeURIComponent(channelId)}` : '';
+    return await apiClient.delete(`/chat/messages/${messageId}${query}`);
+  },
+
+  async clearChannelMessages(channelId) {
+    return await apiClient.delete(`/chat/channels/${channelId}/messages`);
+  },
+
+  async deleteChannel(channelId) {
+    return await apiClient.delete(`/chat/channels/${channelId}`);
   }
 };
+
 

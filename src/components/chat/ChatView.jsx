@@ -53,6 +53,7 @@ import AiAssistantInfoModal from './AiAssistantInfoModal';
 import LinkedSheetsModal from './LinkedSheetsModal';
 import ProductionTrackingCard from './ProductionTrackingCard';
 import AiTaskDelegationCard from './AiTaskDelegationCard';
+import PulseBotMessageRenderer from './PulseBotMessageRenderer';
 import { extractTrackingData, splitMessageIntroAndNotes } from '../../utils/trackingDataParser';
 import StatusCarousel from '../status/StatusCarousel';
 import StatusListPane from '../status/StatusListPane';
@@ -1116,6 +1117,9 @@ export default function ChatView() {
     typingUsers = {},
     sendTypingStatus,
     reactToMessage,
+    deleteChatMessage,
+    clearChat,
+    deleteChatChannel,
     setViewingUserProfile,
     chatPagination = {},
     loadMoreMessages,
@@ -1125,6 +1129,8 @@ export default function ChatView() {
     setIsStatusPrivacyOpen
   } = useTaskContext();
 
+  const [clearChatConfirm, setClearChatConfirm] = useState(false);
+  const [deleteChannelConfirm, setDeleteChannelConfirm] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [selectedTaskAttach, setSelectedTaskAttach] = useState('');
   const [selectedImage, setSelectedImage] = useState(null); // { dataUrl, name, size }
@@ -1927,6 +1933,34 @@ export default function ChatView() {
                           <h4 style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {channel.name}
                           </h4>
+                          {channel.id !== 'chan-ai' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`Delete conversation "${channel.name}"? All message history will be removed.`)) {
+                                  deleteChatChannel(channel.id);
+                                  if (activeChannelId === channel.id) {
+                                    setActiveChannelId('chan-ai');
+                                  }
+                                }
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#94a3b8',
+                                padding: '2px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Delete this conversation"
+                            >
+                              <Trash2 style={{ width: '12px', height: '12px' }} />
+                            </button>
+                          )}
                         </div>
                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>
                           {channel.roleBadge || channel.description}
@@ -2161,6 +2195,53 @@ export default function ChatView() {
                 <FileSpreadsheet style={{ width: '13px', height: '13px' }} />
                 <span className="header-label-tablet">Sheets</span>
                 <span style={{ fontSize: '0.62rem', background: 'var(--color-success)', color: '#fff', padding: '1px 5px', borderRadius: '8px', fontWeight: 800 }}>8</span>
+              </button>
+            )}
+
+            {/* Clear Chat History Button */}
+            <button
+              type="button"
+              onClick={() => setClearChatConfirm(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 10px',
+                borderRadius: '10px',
+                background: '#fee2e2',
+                color: '#dc2626',
+                border: '1px solid #fecdd3',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Clear all messages in this chat"
+            >
+              <Trash2 style={{ width: '13px', height: '13px' }} />
+              <span className="header-label-tablet">Clear Chat</span>
+            </button>
+
+            {/* Delete Conversation Button (For Direct & Custom Group Channels) */}
+            {activeChannel.type !== 'public' && activeChannel.id !== 'chan-ai' && (
+              <button
+                type="button"
+                onClick={() => setDeleteChannelConfirm(true)}
+                style={{
+                  padding: '7px',
+                  borderRadius: '50%',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  color: '#ef4444',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Delete this entire conversation"
+              >
+                <X style={{ width: '15px', height: '15px' }} />
               </button>
             )}
 
@@ -2445,7 +2526,7 @@ export default function ChatView() {
               }
 
               const isSelf = msg.senderId === activeUser.id;
-              const isAi = msg.isAi;
+              const isAi = Boolean(msg.isAi || msg.senderId === 'pulse-bot' || msg.senderId === 'usr-ai' || (msg.senderName && msg.senderName.toLowerCase().includes('pulsebot')) || activeChannel?.type === 'ai');
               const reactionsObj = msg.reactions || {};
               const hasReactions = Object.keys(reactionsObj).length > 0;
 
@@ -2501,10 +2582,10 @@ export default function ChatView() {
                     const hasTracking = Boolean(trackingData);
                     return (
                       <div
-                        className={`chat-msg-body ${hasTracking ? 'has-tracking' : ''}`}
+                        className={`chat-msg-body ${hasTracking ? 'has-tracking' : ''} ${isAi ? 'pulsebot-ai-body' : ''}`}
                         style={{
-                          maxWidth: hasTracking ? '95%' : '82%',
-                          width: hasTracking ? '95%' : 'auto',
+                          maxWidth: (hasTracking || isAi) ? '100%' : '82%',
+                          width: (hasTracking || isAi) ? '100%' : 'auto',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: isSelf ? 'flex-end' : 'flex-start',
@@ -2565,18 +2646,48 @@ export default function ChatView() {
                             {emoji}
                           </button>
                         ))}
+
+                        <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+
+                        {/* Delete Particular Message Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Delete this message?')) {
+                              deleteChatMessage(msg.id, activeChannelId);
+                            }
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: '3px 5px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'transform 0.1s ease',
+                            lineHeight: '1'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                          title="Delete this message"
+                        >
+                          <Trash2 style={{ width: '13px', height: '13px' }} />
+                        </button>
                       </div>
                     )}
 
                     {/* Apple iMessage / AI Message Bubble */}
                     <div
-                      className={`chat-msg-bubble ${isSelf ? 'apple-bubble-outgoing' : 'apple-bubble-incoming'}`}
+                      className={`chat-msg-bubble ${isSelf ? 'apple-bubble-outgoing' : 'apple-bubble-incoming'} ${isAi ? 'pulsebot-ai-bubble' : ''}`}
                       style={{
-                        padding: '0.65rem 0.95rem',
+                        padding: isAi ? '1rem 1.25rem' : '0.65rem 0.95rem',
                         fontSize: '0.875rem',
                         lineHeight: '1.45',
                         position: 'relative',
-                        width: hasTracking ? '100%' : 'auto',
+                        width: (hasTracking || isAi) ? '100%' : 'auto',
                         maxWidth: '100%',
                         boxSizing: 'border-box'
                       }}
@@ -2814,6 +2925,22 @@ export default function ChatView() {
                                 )}
                               </div>
                             </div>
+                          );
+                        }
+
+                        if (isAi && !isSelf) {
+                          return (
+                            <PulseBotMessageRenderer
+                              text={msg.text}
+                              onSendFollowup={(promptText) => {
+                                setMessageInput(promptText);
+                              }}
+                              onDelete={() => {
+                                if (window.confirm('Delete this AI response?')) {
+                                  deleteChatMessage(msg.id, activeChannelId);
+                                }
+                              }}
+                            />
                           );
                         }
 
@@ -3910,6 +4037,171 @@ export default function ChatView() {
         isOpen={isStatusPrivacyOpen}
         onClose={() => setIsStatusPrivacyOpen(false)}
       />
+
+      {/* Clear Chat Confirmation Modal */}
+      {clearChatConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setClearChatConfirm(false)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '420px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <Trash2 style={{ width: '24px', height: '24px' }} />
+            </div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+              {activeChannel.type === 'ai' ? 'Clear PulseBot AI Chat?' : 'Clear Chat History?'}
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5', margin: '0 0 20px' }}>
+              Are you sure you want to clear all messages in this conversation? This will delete the message history and cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setClearChatConfirm(false)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  background: 'var(--bg-card, #ffffff)',
+                  color: 'var(--text-primary, #334155)',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearChat(activeChannelId);
+                  setClearChatConfirm(false);
+                }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
+                }}
+              >
+                Yes, Clear Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Conversation Confirmation Modal */}
+      {deleteChannelConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setDeleteChannelConfirm(false)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '420px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <Trash2 style={{ width: '24px', height: '24px' }} />
+            </div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+              Delete Conversation?
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5', margin: '0 0 20px' }}>
+              Are you sure you want to delete &ldquo;{activeChannel.name}&rdquo;? The conversation and its message history will be permanently deleted.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteChannelConfirm(false)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  background: 'var(--bg-card, #ffffff)',
+                  color: 'var(--text-primary, #334155)',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteChatChannel(activeChannelId);
+                  setActiveChannelId('chan-ai');
+                  setDeleteChannelConfirm(false);
+                }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
+                }}
+              >
+                Yes, Delete Conversation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

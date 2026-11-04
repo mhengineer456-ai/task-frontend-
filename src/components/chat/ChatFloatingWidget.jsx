@@ -35,6 +35,7 @@ import AiAssistantInfoModal from './AiAssistantInfoModal';
 import LinkedSheetsModal from './LinkedSheetsModal';
 import ProductionTrackingCard from './ProductionTrackingCard';
 import AiTaskDelegationCard from './AiTaskDelegationCard';
+import PulseBotMessageRenderer from './PulseBotMessageRenderer';
 import { extractTrackingData, splitMessageIntroAndNotes } from '../../utils/trackingDataParser';
 
 const POPULAR_EMOJIS = [
@@ -819,6 +820,9 @@ export default function ChatFloatingWidget() {
     typingUsers = {},
     sendTypingStatus,
     reactToMessage,
+    deleteChatMessage,
+    clearChat,
+    deleteChatChannel,
     setViewingUserProfile,
     chatPagination = {},
     loadMoreMessages
@@ -1214,6 +1218,31 @@ export default function ChatFloatingWidget() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
                 type="button"
+                onClick={() => {
+                  if (window.confirm(`Clear all messages in this ${activeChannel.type === 'ai' ? 'PulseBot AI chat' : 'conversation'}?`)) {
+                    clearChat(activeChannelId);
+                  }
+                }}
+                style={{
+                  color: '#ffffff',
+                  background: 'rgba(239, 68, 68, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}
+                title="Clear all messages in this chat"
+              >
+                <Trash2 style={{ width: '11px', height: '11px' }} />
+                <span>Clear</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleHeaderClick}
                 style={{
                   color: '#ffffff',
@@ -1521,6 +1550,7 @@ export default function ChatFloatingWidget() {
                   const hasReactions = Object.keys(reactionsObj).length > 0;
                   const senderUser = users.find(u => String(u.id) === String(msg.senderId) || (msg.senderName && u.name?.trim().toLowerCase() === msg.senderName.trim().toLowerCase()));
                   const displayAvatar = (senderUser && senderUser.avatar) || msg.senderAvatar || (isSelf ? activeUser?.avatar : null);
+                  const isAi = Boolean(msg.isAi || msg.senderId === 'pulse-bot' || msg.senderId === 'usr-ai' || (msg.senderName && msg.senderName.toLowerCase().includes('pulsebot')) || activeChannelId?.startsWith('chan-ai'));
 
                   return (
                     <div
@@ -1578,7 +1608,7 @@ export default function ChatFloatingWidget() {
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: isSelf ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: isSelf ? 'flex-end' : 'flex-start', maxWidth: isAi ? '100%' : '85%', width: isAi ? '100%' : 'auto' }}>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
                           {msg.senderName} • {getTimeAgo(msg.timestamp)}
                         </span>
@@ -1619,19 +1649,47 @@ export default function ChatFloatingWidget() {
                               {emoji}
                             </button>
                           ))}
+
+                          <div style={{ width: '1px', height: '12px', background: '#e2e8f0', margin: '0 1px' }} />
+
+                          {/* Delete Message Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm('Delete this message?')) {
+                                deleteChatMessage(msg.id, activeChannelId);
+                              }
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              padding: '1px 3px',
+                              lineHeight: '1',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Delete this message"
+                          >
+                            <Trash2 style={{ width: '11px', height: '11px' }} />
+                          </button>
                         </div>
                       )}
 
                       <div
+                        className={isAi ? 'pulsebot-ai-bubble' : ''}
                         style={{
-                          padding: '0.65rem 0.95rem',
+                          padding: isAi ? '0.85rem 1rem' : '0.65rem 0.95rem',
                           borderRadius: isSelf ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
                           background: isSelf ? '#0284c7' : '#ffffff',
                           color: isSelf ? '#ffffff' : 'var(--text-primary)',
                           fontSize: '0.8125rem',
                           border: isSelf ? 'none' : '1px solid var(--border-color)',
-                          maxWidth: '90%',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+                          maxWidth: isAi ? '100%' : '90%',
+                          width: isAi ? '100%' : 'auto',
+                          boxShadow: isAi ? '0 4px 16px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.06)'
                         }}
                       >
                         {/* Audio Voice Note Bubble */}
@@ -1737,6 +1795,22 @@ export default function ChatFloatingWidget() {
                                   </div>
                                 ) : null}
                               </div>
+                            );
+                          }
+
+                          if (isAi && !isSelf) {
+                            return (
+                              <PulseBotMessageRenderer
+                                text={msg.text}
+                                onSendFollowup={(promptText) => {
+                                  setMessageInput(promptText);
+                                }}
+                                onDelete={() => {
+                                  if (window.confirm('Delete this AI response?')) {
+                                    deleteChatMessage(msg.id, activeChannelId);
+                                  }
+                                }}
+                              />
                             );
                           }
 

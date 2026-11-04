@@ -798,6 +798,41 @@ export const TaskProvider = ({ children }) => {
       loadStatusFeed(activeUser?.id);
     };
 
+    const handleChatMessageDeleted = ({ messageId, channelId }) => {
+      setChatMessages(prev => {
+        if (!channelId) {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(cid => {
+            updated[cid] = (updated[cid] || []).filter(m => m.id !== messageId);
+          });
+          return updated;
+        }
+        const list = prev[channelId] || [];
+        return {
+          ...prev,
+          [channelId]: list.filter(m => m.id !== messageId)
+        };
+      });
+    };
+
+    const handleChatCleared = ({ channelId }) => {
+      if (!channelId) return;
+      setChatMessages(prev => ({
+        ...prev,
+        [channelId]: []
+      }));
+    };
+
+    const handleChannelDeleted = ({ channelId }) => {
+      if (!channelId) return;
+      setChatChannels(prev => prev.filter(c => c.id !== channelId));
+      setChatMessages(prev => {
+        const next = { ...prev };
+        delete next[channelId];
+        return next;
+      });
+    };
+
     s.on('task:created', handleTaskCreated);
     s.on('task:updated', handleTaskUpdated);
     s.on('task:deleted', handleTaskDeleted);
@@ -806,6 +841,9 @@ export const TaskProvider = ({ children }) => {
     s.on('chat:typing', handleChatTyping);
     s.on('chat:reaction', handleChatReaction);
     s.on('chat:channel_created', handleChannelCreated);
+    s.on('chat:message_deleted', handleChatMessageDeleted);
+    s.on('chat:cleared', handleChatCleared);
+    s.on('chat:channel_deleted', handleChannelDeleted);
     s.on('notification:new', handleNotificationNew);
     s.on('leave:updated', handleLeaveUpdated);
     s.on('status:created', handleStatusCreated);
@@ -821,6 +859,9 @@ export const TaskProvider = ({ children }) => {
       s.off('chat:typing', handleChatTyping);
       s.off('chat:reaction', handleChatReaction);
       s.off('chat:channel_created', handleChannelCreated);
+      s.off('chat:message_deleted', handleChatMessageDeleted);
+      s.off('chat:cleared', handleChatCleared);
+      s.off('chat:channel_deleted', handleChannelDeleted);
       s.off('notification:new', handleNotificationNew);
       s.off('leave:updated', handleLeaveUpdated);
       s.off('status:created', handleStatusCreated);
@@ -2158,6 +2199,69 @@ export const TaskProvider = ({ children }) => {
       .catch(err => console.warn('Reaction sync notice:', err));
   };
 
+  const deleteChatMessage = async (messageId, channelId) => {
+    if (!messageId) return;
+    setChatMessages(prev => {
+      if (!channelId) {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(cid => {
+          updated[cid] = (updated[cid] || []).filter(m => m.id !== messageId);
+        });
+        return updated;
+      }
+      return {
+        ...prev,
+        [channelId]: (prev[channelId] || []).filter(m => m.id !== messageId)
+      };
+    });
+
+    try {
+      await chatService.deleteMessage(messageId, channelId);
+    } catch (err) {
+      console.warn('Delete chat message warning:', err);
+    }
+  };
+
+  const clearChat = async (channelId) => {
+    if (!channelId) return;
+    setChatMessages(prev => ({
+      ...prev,
+      [channelId]: []
+    }));
+
+    try {
+      await chatService.clearChannelMessages(channelId);
+      triggerRealtimeToast({
+        title: 'Chat Cleared',
+        message: 'All messages in this conversation have been cleared.',
+        type: 'info'
+      });
+    } catch (err) {
+      console.warn('Clear chat warning:', err);
+    }
+  };
+
+  const deleteChatChannel = async (channelId) => {
+    if (!channelId) return;
+    setChatChannels(prev => prev.filter(c => c.id !== channelId));
+    setChatMessages(prev => {
+      const next = { ...prev };
+      delete next[channelId];
+      return next;
+    });
+
+    try {
+      await chatService.deleteChannel(channelId);
+      triggerRealtimeToast({
+        title: 'Conversation Deleted',
+        message: 'Chat conversation has been deleted successfully.',
+        type: 'info'
+      });
+    } catch (err) {
+      console.warn('Delete channel warning:', err);
+    }
+  };
+
   const startDirectChat = async (targetUser) => {
     if (!targetUser || !targetUser.id || !activeUser?.id) return;
     const sorted = [activeUser.id, targetUser.id].sort();
@@ -2613,6 +2717,9 @@ export const TaskProvider = ({ children }) => {
         activeChannelId,
         setActiveChannelId,
         sendChatMessage,
+        deleteChatMessage,
+        clearChat,
+        deleteChatChannel,
         activeView,
         setActiveView,
         selectedTaskId,
