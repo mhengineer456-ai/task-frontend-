@@ -350,6 +350,11 @@ export const TaskProvider = ({ children }) => {
             return c;
           });
           setChatChannels(personalized);
+
+          const userAiChan = personalized.find(c => c.type === 'ai' || (activeUserId && c.id === `chan-ai-${activeUserId}`));
+          if (userAiChan) {
+            setActiveChannelId(prev => (!prev || prev === 'chan-ai' || prev.startsWith('chan-ai-')) ? userAiChan.id : prev);
+          }
         }
       })
       .catch(err => console.log('Chat channels REST fallback:', err));
@@ -566,6 +571,13 @@ export const TaskProvider = ({ children }) => {
 
     const handleChatMessage = (msg) => {
       if (!msg || !msg.channelId) return;
+
+      // PulseBot AI channel isolation guard:
+      // If message is in an AI channel, only accept if it belongs to this activeUser!
+      if (msg.channelId.startsWith('chan-ai-') && activeUser?.id && msg.channelId !== `chan-ai-${activeUser.id}`) {
+        return;
+      }
+
       setChatMessages(prev => {
         const list = prev[msg.channelId] || [];
         
@@ -744,10 +756,10 @@ export const TaskProvider = ({ children }) => {
     }
   }, [activeChannelId]);
 
-  // Load chat messages when active channel changes (Default: Last 3 Days like WhatsApp)
+  // Load chat messages when active channel or active user changes (Default: Last 3 Days like WhatsApp)
   useEffect(() => {
     if (activeChannelId) {
-      chatService.getMessages(activeChannelId, { days: 3, limit: 30 })
+      chatService.getMessages(activeChannelId, { days: 3, limit: 30, userId: activeUser?.id })
         .then(res => {
           if (res && res.success && Array.isArray(res.messages)) {
             setChatMessages(prev => ({
@@ -766,7 +778,7 @@ export const TaskProvider = ({ children }) => {
         })
         .catch(err => console.log('Fetch channel messages fallback:', err));
     }
-  }, [activeChannelId]);
+  }, [activeChannelId, activeUser?.id]);
 
   // Reverse scroll pagination: Loads older messages before the oldest rendered message
   const loadMoreMessages = async (channelId) => {
@@ -1800,10 +1812,11 @@ export const TaskProvider = ({ children }) => {
       }
     }).catch(err => console.warn('Chat send message warning:', err));
 
-    if (channelId === 'chan-ai' && (text || imageUrl || taggedUserId)) {
+    const isAiTarget = channelId === 'chan-ai' || channelId.startsWith('chan-ai-');
+    if (isAiTarget && (text || imageUrl || taggedUserId)) {
       setTimeout(() => {
         const promptText = (text || '').trim() || (imageUrl ? 'Please check this image and identify the Lot Number and production details.' : '');
-        generatePulseBotAiReply(promptText, imageUrl, taggedUserId, requireEaFollowup);
+        generatePulseBotAiReply(promptText, imageUrl, taggedUserId, requireEaFollowup, channelId);
       }, 600);
     }
   };
@@ -2082,8 +2095,9 @@ export const TaskProvider = ({ children }) => {
     setActiveStatusStory(null);
   };
 
-  const generatePulseBotAiReply = async (userPrompt, imageUrl = null, taggedUserId = null, requireEaFollowup = false) => {
+  const generatePulseBotAiReply = async (userPrompt, imageUrl = null, taggedUserId = null, requireEaFollowup = false, targetChannelId = null) => {
     setIsAiTyping(true);
+    const resolvedChannelId = targetChannelId || (activeUser?.id ? `chan-ai-${activeUser.id}` : 'chan-ai');
     let replyText = '';
     let isN8n = false;
     let pdfAttachment = null;
@@ -2099,7 +2113,7 @@ export const TaskProvider = ({ children }) => {
         message: userPrompt,
         imageUrl,
         sessionId: `user-${activeUser?.id || 'usr-1'}`,
-        channelId: 'chan-ai',
+        channelId: resolvedChannelId,
         userId: activeUser?.id || 'usr-1',
         taggedUserId,
         requireEaFollowup
@@ -2191,6 +2205,7 @@ export const TaskProvider = ({ children }) => {
 
     const aiMsg = returnedMessage || {
       id: `msg-ai-${Date.now()}`,
+      channelId: resolvedChannelId,
       senderId: 'pulse-bot',
       senderName: isN8n ? 'PulseBot AI (Gemini)' : 'PulseBot AI',
       senderAvatar: '🤖',
@@ -2206,11 +2221,11 @@ export const TaskProvider = ({ children }) => {
     };
 
     setChatMessages(prev => {
-      const list = prev['chan-ai'] || [];
+      const list = prev[resolvedChannelId] || [];
       if (list.some(m => m.id === aiMsg.id)) return prev;
       return {
         ...prev,
-        'chan-ai': [...list, aiMsg]
+        [resolvedChannelId]: [...list, aiMsg]
       };
     });
   };

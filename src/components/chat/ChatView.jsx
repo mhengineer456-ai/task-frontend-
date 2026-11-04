@@ -1536,7 +1536,8 @@ export default function ChatView() {
   };
 
   const handleQuickAiPrompt = (promptText) => {
-    sendChatMessage('chan-ai', promptText);
+    const aiTargetId = activeChannel?.type === 'ai' ? activeChannel.id : (chatChannels.find(c => c.type === 'ai')?.id || (activeUser?.id ? `chan-ai-${activeUser.id}` : 'chan-ai'));
+    sendChatMessage(aiTargetId, promptText);
     isAutoScrollEnabled.current = true;
     setIsAtBottom(true);
     setTimeout(() => scrollToBottom('smooth'), 50);
@@ -1649,7 +1650,7 @@ export default function ChatView() {
               type="button"
               onClick={() => {
                 setSidebarTab('ai');
-                const aiChan = chatChannels.find(c => c.type === 'ai' || c.id === 'chan-ai');
+                const aiChan = chatChannels.find(c => c.type === 'ai' || c.id === 'chan-ai' || c.id.startsWith('chan-ai-'));
                 if (aiChan) setActiveChannelId(aiChan.id);
                 setMobileActivePane('chat');
               }}
@@ -1724,7 +1725,7 @@ export default function ChatView() {
             >
           {/* Pinned AI Assistant Card (Visible in 'all' or 'ai') */}
           {(sidebarTab === 'all' || sidebarTab === 'ai') && (() => {
-            const aiChannel = chatChannels.find(c => c.type === 'ai' || c.id === 'chan-ai') || { id: 'chan-ai', name: 'PulseBot AI' };
+            const aiChannel = chatChannels.find(c => c.type === 'ai' || c.id === 'chan-ai' || c.id.startsWith('chan-ai-')) || { id: activeUser?.id ? `chan-ai-${activeUser.id}` : 'chan-ai', name: 'PulseBot AI', type: 'ai' };
             const isAiActive = activeChannelId === aiChannel.id;
             return (
               <div style={{ marginBottom: '0.2rem' }}>
@@ -3065,7 +3066,7 @@ export default function ChatView() {
           )}
 
           {/* AI Thinking Indicator */}
-          {isAiTyping && activeChannelId === 'chan-ai' && (
+          {isAiTyping && (activeChannel?.type === 'ai' || activeChannelId === 'chan-ai' || (typeof activeChannelId === 'string' && activeChannelId.startsWith('chan-ai-'))) && (
             <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
               <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #8b5cf6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: '#fff' }}>
                 🤖

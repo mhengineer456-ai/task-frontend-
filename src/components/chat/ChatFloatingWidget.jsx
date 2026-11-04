@@ -1868,7 +1868,7 @@ export default function ChatFloatingWidget() {
               )}
 
               {/* AI Thinking Indicator */}
-              {isAiTyping && activeChannelId === 'chan-ai' && (
+              {isAiTyping && (activeChannel?.type === 'ai' || activeChannelId === 'chan-ai' || (typeof activeChannelId === 'string' && activeChannelId.startsWith('chan-ai-'))) && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <span style={{ fontSize: '0.65rem', color: '#0284c7', fontWeight: 700, marginBottom: '2px' }}>PulseBot AI is thinking...</span>
                   <div
