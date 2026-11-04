@@ -5879,7 +5879,14 @@ html.dark .apple-segmented-tab.active {
   background: #1f2c34;
   cursor: grab;
   z-index: 20;
-  transition: box-shadow 0.18s ease;
+  transition: box-shadow 0.18s ease, width 0.2s ease, height 0.2s ease;
+}
+
+.call-local-pip-box.is-presenting {
+  width: 220px;
+  height: 135px;
+  background: #0b141a;
+  border-color: rgba(37, 211, 102, 0.5);
 }
 
 .call-local-pip-box.dragging {
@@ -6018,7 +6025,7 @@ html.dark .apple-segmented-tab.active {
   background: rgba(0, 168, 132, 0.25);
 }
 
-/* Presenter Mode (Local User Sharing Screen) */
+/* Presenter Mode (Local User Sharing Screen - Google Meet / Zoom style) */
 .call-presenter-stage {
   width: 100%;
   height: 100%;
@@ -6026,7 +6033,101 @@ html.dark .apple-segmented-tab.active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000000;
+  background: #0b141a;
+  overflow: hidden;
+}
+
+.call-presenter-center-card {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: rgba(17, 27, 33, 0.92);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 32px 36px 28px;
+  max-width: 480px;
+  width: 90%;
+  backdrop-filter: blur(20px);
+  animation: callCardPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.call-presenter-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1.5px solid rgba(37, 211, 102, 0.4);
+  color: #25D366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 0 24px rgba(37, 211, 102, 0.2);
+}
+
+.call-presenter-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37, 211, 102, 0.16);
+  border: 1px solid rgba(37, 211, 102, 0.45);
+  color: #25D366;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 14px;
+  margin-bottom: 14px;
+}
+
+.call-presenter-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.01em;
+}
+
+.call-presenter-subtitle {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #94a3b8;
+  margin: 0 0 24px 0;
+}
+
+.call-presenter-subtitle strong {
+  color: #f1f5f9;
+}
+
+.call-presenter-stop-btn-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: #EA4335;
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  padding: 11px 26px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 6px 20px rgba(234, 67, 53, 0.4);
+}
+
+.call-presenter-stop-btn-card:hover {
+  background: #dc2626;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(234, 67, 53, 0.55);
+}
+
+.call-presenter-stop-btn-card:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .call-presenter-badge {

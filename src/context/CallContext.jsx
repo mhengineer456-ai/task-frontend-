@@ -26,6 +26,26 @@ const DEFAULT_ICE_SERVERS = [
   { urls: 'stun:stun.cloudflare.com:3478' }
 ];
 
+// Helper to safely find the video transceiver on RTCPeerConnection without confusing audio
+const getVideoTransceiver = (pc) => {
+  if (!pc || !pc.getTransceivers) return null;
+  const transceivers = pc.getTransceivers();
+  return transceivers.find((t) => {
+    const senderKind = t.sender?.track?.kind;
+    const receiverKind = t.receiver?.track?.kind;
+    return senderKind === 'video' || receiverKind === 'video';
+  }) || null;
+};
+
+// Helper to safely find the video sender on RTCPeerConnection
+const getVideoSender = (pc) => {
+  if (!pc) return null;
+  const vt = getVideoTransceiver(pc);
+  if (vt && vt.sender) return vt.sender;
+  const senders = pc.getSenders ? pc.getSenders() : [];
+  return senders.find((s) => s.track && s.track.kind === 'video') || null;
+};
+
 export const CallProvider = ({ children, activeUser }) => {
   // Call States: IDLE, INITIATING, RINGING, INCOMING, CONNECTING, CONNECTED, REJECTED, MISSED, ENDED, BUSY, FAILED
   const [callState, setCallState] = useState('IDLE');
@@ -655,22 +675,63 @@ export const CallProvider = ({ children, activeUser }) => {
     setIsScreenSharing(false);
 
     const pc = peerConnectionRef.current;
+    const targetId = remoteUserRef.current?.id || remoteUser?.id;
+
     if (pc) {
-      const senders = pc.getSenders();
-      const videoSender = senders.find((s) => s.track && s.track.kind === 'video');
-      const cameraTrack = localStreamRef.current ? localStreamRef.current.getVideoTracks()[0] : null;
+      const videoSender = getVideoSender(pc);
+      let cameraTrack = localStreamRef.current ? localStreamRef.current.getVideoTracks()[0] : null;
 
       if (videoSender) {
-        if (cameraTrack && !isVideoOff) {
+        if (cameraTrack && cameraTrack.readyState === 'live' && !isVideoOff && callType === 'video') {
+          cameraTrack.enabled = true;
           await videoSender.replaceTrack(cameraTrack).catch(() => {});
+          if (localStreamRef.current) {
+            setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+          }
+        } else if (callType === 'video' && !isVideoOff) {
+          try {
+            const camStream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+            });
+            const newCamTrack = camStream.getVideoTracks()[0];
+            if (newCamTrack) {
+              if (localStreamRef.current) {
+                localStreamRef.current.addTrack(newCamTrack);
+              }
+              setLocalStream(new MediaStream(localStreamRef.current ? localStreamRef.current.getTracks() : [newCamTrack]));
+              await videoSender.replaceTrack(newCamTrack).catch(() => {});
+            }
+          } catch (camErr) {
+            console.warn('Could not re-acquire camera track:', camErr);
+            await videoSender.replaceTrack(null).catch(() => {});
+          }
         } else {
+          // If in audio-only call or video is turned off, clear track cleanly
           await videoSender.replaceTrack(null).catch(() => {});
         }
+      }
+
+      // Send renegotiation offer so peer decoder switches back cleanly
+      try {
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: callType === 'video'
+        });
+        await pc.setLocalDescription(offer);
+        const socket = getSocket();
+        if (socket && targetId) {
+          socket.emit('call:offer', {
+            callId,
+            targetUserId: String(targetId),
+            offer
+          });
+        }
+      } catch (negErr) {
+        console.warn('Renegotiation offer notice on stop:', negErr);
       }
     }
 
     const socket = getSocket();
-    const targetId = remoteUserRef.current?.id || remoteUser?.id;
     if (socket && targetId) {
       socket.emit('call:screenshare-toggle', {
         callId,
@@ -678,7 +739,7 @@ export const CallProvider = ({ children, activeUser }) => {
         isSharing: false
       });
     }
-  }, [callId, isVideoOff, remoteUser?.id]);
+  }, [callId, callType, isVideoOff, remoteUser?.id]);
 
   /**
    * Start Screen Sharing via getDisplayMedia
@@ -725,6 +786,12 @@ export const CallProvider = ({ children, activeUser }) => {
         return;
       }
 
+      // Explicitly set contentHint on screen track for crisp desktop text and coding fonts
+      if ('contentHint' in screenTrack) {
+        screenTrack.contentHint = 'detail';
+      }
+      screenTrack.enabled = true;
+
       // Handle user stopping screen share from browser's floating toolbar ("Stop sharing")
       screenTrack.onended = () => {
         console.log('🖥️ [ScreenShare] Screen track ended via browser toolbar or user action');
@@ -735,20 +802,30 @@ export const CallProvider = ({ children, activeUser }) => {
       const targetId = remoteUserRef.current?.id || remoteUser?.id;
 
       if (pc) {
-        const senders = pc.getSenders();
-        let videoSender = senders.find((s) => s.track && s.track.kind === 'video');
-        if (!videoSender) {
-          const transceivers = pc.getTransceivers ? pc.getTransceivers() : [];
-          const videoTransceiver = transceivers.find((t) => t.sender?.track?.kind === 'video' || t.receiver?.track?.kind === 'video');
-          if (videoTransceiver && videoTransceiver.sender) {
-            videoSender = videoTransceiver.sender;
-          }
+        const videoTransceiver = getVideoTransceiver(pc);
+        const videoSender = getVideoSender(pc);
+
+        if (videoTransceiver && videoTransceiver.direction === 'recvonly') {
+          videoTransceiver.direction = 'sendrecv';
+        }
+
+        // Keep local webcam track in localStreamRef so we can restore it instantaneously,
+        // but disable it while presenting to save bandwidth and hardware resources
+        if (localStreamRef.current) {
+          localStreamRef.current.getVideoTracks().forEach((ct) => {
+            ct.enabled = false;
+          });
         }
 
         if (videoSender) {
           await videoSender.replaceTrack(screenTrack);
         } else {
+          // If no video transceiver existed (e.g. started as voice call), add the track
           pc.addTrack(screenTrack, screen);
+        }
+
+        // Always create and dispatch renegotiation offer so remote peer decoder switches cleanly!
+        try {
           const offer = await pc.createOffer({
             offerToReceiveAudio: true,
             offerToReceiveVideo: true
@@ -763,6 +840,8 @@ export const CallProvider = ({ children, activeUser }) => {
               offer
             });
           }
+        } catch (offerErr) {
+          console.warn('Renegotiation offer notice:', offerErr);
         }
       }
 
@@ -892,13 +971,21 @@ export const CallProvider = ({ children, activeUser }) => {
       setTimeout(resetCallState, 2000);
     };
 
-    // 5. SDP Offer from Caller
+    // 5. SDP Offer from Caller or renegotiation during call
     const handleCallOffer = async (payload) => {
       console.log('📥 [WebRTC] Received SDP Offer from:', payload.fromUserId);
       const pc = peerConnectionRef.current;
       if (pc && payload.offer) {
         try {
-          await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+          if (pc.signalingState !== 'stable') {
+            console.log('Signaling state is', pc.signalingState, '- handling collision/rollback');
+            await Promise.all([
+              pc.setLocalDescription({ type: 'rollback' }).catch(() => {}),
+              pc.setRemoteDescription(new RTCSessionDescription(payload.offer))
+            ]);
+          } else {
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+          }
 
           // Drain queued ICE candidates
           while (pendingIceCandidatesRef.current.length > 0) {
@@ -1014,6 +1101,9 @@ export const CallProvider = ({ children, activeUser }) => {
     const handleRemoteScreenShare = (payload) => {
       console.log('🖥️ [Socket] Remote screen share toggle:', payload.isSharing);
       setIsRemoteScreenSharing(Boolean(payload.isSharing));
+      if (remoteStreamRef.current) {
+        setRemoteStream(new MediaStream(remoteStreamRef.current.getTracks()));
+      }
     };
 
     socket.on('call:incoming', handleIncomingCall);

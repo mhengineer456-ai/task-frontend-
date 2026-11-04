@@ -134,20 +134,14 @@ export default function CallOverlayModal() {
   // 3. Attach Local Video Stream / PiP Stream
   useEffect(() => {
     if (localVideoRef.current) {
-      // When local user is presenting, PiP displays remote participant's video (if sending video)
-      // Otherwise, PiP displays local camera
-      const streamToBind = (isScreenSharing && !isRemoteScreenSharing)
-        ? (remoteStream && remoteStream.getVideoTracks().length > 0 ? remoteStream : null)
-        : localStream;
-
-      if (streamToBind) {
-        localVideoRef.current.srcObject = streamToBind;
+      if (localStream) {
+        localVideoRef.current.srcObject = localStream;
         localVideoRef.current.play().catch((e) => console.warn('Local video play error:', e));
       } else {
         localVideoRef.current.srcObject = null;
       }
     }
-  }, [localStream, remoteStream, screenStream, isScreenSharing, isRemoteScreenSharing, isVideoOff, showVideoStage, callState]);
+  }, [localStream, isVideoOff, showVideoStage, callState]);
 
   // 4. Attach Remote Video Stream (Remote peer's camera or remote peer's screen share)
   useEffect(() => {
@@ -406,29 +400,51 @@ export default function CallOverlayModal() {
               {/* Active Video / Screen Sharing Stage */}
               {showVideoStage ? (
                 <div className="call-video-stage">
-                  {/* 1. If YOU are presenting your screen: Display your live screen share on the stage */}
+                  {/* 1. If YOU are presenting your screen: Display Google Meet-style presenter card + remote participant */}
                   {isScreenSharing && !isRemoteScreenSharing ? (
                     <div className="call-presenter-stage">
-                      <video
-                        ref={presenterVideoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="call-remote-video"
-                        style={{ objectFit: 'contain' }}
-                      />
-                      <div className="call-presenter-badge">
-                        <div className="call-presenter-indicator">
-                          <MonitorUp size={16} />
-                          <span>You are sharing your screen</span>
+                      {/* Background: Remote Participant's video or avatar */}
+                      {remoteStream && remoteStream.getVideoTracks().length > 0 ? (
+                        <video
+                          ref={remoteVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="call-remote-video"
+                        />
+                      ) : (
+                        <div className="call-remote-placeholder">
+                          <div className="call-large-avatar">
+                            <img
+                              src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=200`}
+                              alt={remoteUser?.name}
+                            />
+                          </div>
+                          <h2 className="call-participant-name">{remoteUser?.name}</h2>
+                          <p className="call-audio-badge">Audio connected</p>
                         </div>
+                      )}
+
+                      {/* Google Meet / Zoom style Presenter Center Card */}
+                      <div className="call-presenter-center-card">
+                        <div className="call-presenter-icon-wrap">
+                          <MonitorUp size={36} />
+                        </div>
+                        <div className="call-presenter-live-pill">
+                          <span className="call-record-dot live-dot" />
+                          <span>PRESENTING LIVE</span>
+                        </div>
+                        <h3 className="call-presenter-title">You are presenting your screen</h3>
+                        <p className="call-presenter-subtitle">
+                          Your screen is visible to <strong>{remoteUser?.name || 'everyone'}</strong>. Switch to any tab, browser, or window to present.
+                        </p>
                         <button
                           type="button"
                           onClick={toggleScreenShare}
-                          className="call-presenter-stop-btn"
+                          className="call-presenter-stop-btn-card"
                           title="Stop sharing your screen"
                         >
-                          <MonitorOff size={14} />
+                          <MonitorOff size={16} />
                           <span>Stop Sharing</span>
                         </button>
                       </div>
@@ -463,7 +479,7 @@ export default function CallOverlayModal() {
 
                   {/* Floating Draggable Local / Participant PiP Video Window */}
                   <div
-                    className={`call-local-pip-box ${isDraggingPip ? 'dragging' : ''}`}
+                    className={`call-local-pip-box ${isDraggingPip ? 'dragging' : ''} ${isScreenSharing && !isRemoteScreenSharing ? 'is-presenting' : ''}`}
                     style={{
                       right: `${pipPos.x}px`,
                       bottom: `${pipPos.y}px`
@@ -472,44 +488,46 @@ export default function CallOverlayModal() {
                     title="Drag to reposition preview"
                   >
                     {isScreenSharing && !isRemoteScreenSharing ? (
-                      /* When you are presenting: PiP shows remote colleague */
-                      remoteStream && remoteStream.getVideoTracks().length > 0 ? (
+                      /* When you are presenting: PiP shows your screen live preview thumbnail (safely bounded) */
+                      <>
+                        <video
+                          ref={presenterVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="call-local-video"
+                          style={{ transform: 'none', objectFit: 'contain', background: '#0a0f14' }}
+                        />
+                        <div className="call-local-pip-label">
+                          <span>Your Screen (Live)</span>
+                        </div>
+                      </>
+                    ) : isVideoOff && !isScreenSharing ? (
+                      <>
+                        <div className="call-local-pip-off">
+                          <VideoOff size={22} />
+                          <span>Camera Off</span>
+                        </div>
+                        <div className="call-local-pip-label">
+                          <span>You</span>
+                          {isMuted && <MicOff size={11} color="#EF4444" />}
+                        </div>
+                      </>
+                    ) : (
+                      <>
                         <video
                           ref={localVideoRef}
                           autoPlay
                           playsInline
                           muted
                           className="call-local-video"
-                          style={{ transform: 'none' }}
                         />
-                      ) : (
-                        <div className="call-local-pip-off">
-                          <img
-                            src={remoteUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteUser?.name || 'User')}&background=00A884&color=fff&size=80`}
-                            alt={remoteUser?.name}
-                            style={{ width: 48, height: 48, borderRadius: '50%', marginBottom: 6 }}
-                          />
-                          <span>{remoteUser?.name || 'Participant'}</span>
+                        <div className="call-local-pip-label">
+                          <span>You</span>
+                          {isMuted && <MicOff size={11} color="#EF4444" />}
                         </div>
-                      )
-                    ) : isVideoOff && !isScreenSharing ? (
-                      <div className="call-local-pip-off">
-                        <VideoOff size={22} />
-                        <span>Camera Off</span>
-                      </div>
-                    ) : (
-                      <video
-                        ref={localVideoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="call-local-video"
-                      />
+                      </>
                     )}
-                    <div className="call-local-pip-label">
-                      <span>{isScreenSharing && !isRemoteScreenSharing ? (remoteUser?.name || 'Participant') : 'You'}</span>
-                      {isMuted && !isScreenSharing && <MicOff size={11} color="#EF4444" />}
-                    </div>
                   </div>
                 </div>
                 ) : (
