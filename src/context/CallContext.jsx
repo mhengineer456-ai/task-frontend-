@@ -48,6 +48,7 @@ export const CallProvider = ({ children, activeUser }) => {
   // Media Streams
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const [screenStream, setScreenStream] = useState(null);
 
   // Call History State
   const [callHistory, setCallHistory] = useState([]);
@@ -122,6 +123,7 @@ export const CallProvider = ({ children, activeUser }) => {
     }
     setIsScreenSharing(false);
     setIsRemoteScreenSharing(false);
+    setScreenStream(null);
     setLocalStream(null);
 
     if (remoteStreamRef.current) {
@@ -631,6 +633,7 @@ export const CallProvider = ({ children, activeUser }) => {
       screenStreamRef.current = null;
     }
 
+    setScreenStream(null);
     setIsScreenSharing(false);
 
     const pc = peerConnectionRef.current;
@@ -662,24 +665,50 @@ export const CallProvider = ({ children, activeUser }) => {
    * Start Screen Sharing via getDisplayMedia
    */
   const startScreenShare = useCallback(async () => {
-    if (!peerConnectionRef.current || callState !== 'CONNECTED') return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      setErrorMessage('Screen sharing is not supported in this browser or environment.');
+      setTimeout(() => setErrorMessage(null), 3500);
+      return;
+    }
+
+    if (!peerConnectionRef.current || callState !== 'CONNECTED') {
+      console.warn('Cannot share screen: call is not connected');
+      return;
+    }
 
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          cursor: 'always',
-          displaySurface: 'monitor'
-        },
-        audio: false
-      });
+      let screen;
+      try {
+        screen = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: 'always'
+          },
+          audio: false
+        });
+      } catch (firstErr) {
+        if (firstErr.name === 'NotAllowedError') {
+          console.log('User cancelled screen selection dialog');
+          return;
+        }
+        console.warn('Advanced display media constraints failed, falling back to basic video: true', firstErr);
+        screen = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false
+        });
+      }
 
-      screenStreamRef.current = screenStream;
-      const screenTrack = screenStream.getVideoTracks()[0];
-      if (!screenTrack) return;
+      screenStreamRef.current = screen;
+      setScreenStream(screen);
+
+      const screenTrack = screen.getVideoTracks()[0];
+      if (!screenTrack) {
+        console.warn('No video track found in screen stream');
+        return;
+      }
 
       // Handle user stopping screen share from browser's floating toolbar ("Stop sharing")
       screenTrack.onended = () => {
-        console.log('🖥️ [ScreenShare] Screen track ended via browser toolbar');
+        console.log('🖥️ [ScreenShare] Screen track ended via browser toolbar or user action');
         stopScreenShare();
       };
 
@@ -690,12 +719,13 @@ export const CallProvider = ({ children, activeUser }) => {
       if (videoSender) {
         await videoSender.replaceTrack(screenTrack);
       } else {
-        pc.addTrack(screenTrack, screenStream);
+        pc.addTrack(screenTrack, screen);
         const offer = await pc.createOffer({
           offerToReceiveAudio: true,
           offerToReceiveVideo: true
         });
         await pc.setLocalDescription(offer);
+
         const socket = getSocket();
         if (socket && remoteUser?.id) {
           socket.emit('call:offer', {
@@ -717,8 +747,12 @@ export const CallProvider = ({ children, activeUser }) => {
         });
       }
     } catch (err) {
-      if (err.name !== 'NotAllowedError') {
-        console.warn('Screen sharing error:', err);
+      if (err.name === 'NotAllowedError') {
+        console.log('User cancelled screen selection dialog');
+      } else {
+        console.error('Screen sharing error:', err);
+        setErrorMessage(`Could not start screen share: ${err.message}`);
+        setTimeout(() => setErrorMessage(null), 4000);
       }
     }
   }, [callId, callState, remoteUser?.id, stopScreenShare]);
@@ -840,9 +874,12 @@ export const CallProvider = ({ children, activeUser }) => {
             } catch (e) {}
           }
 
+          const sdp = payload.offer?.sdp || '';
+          const offerHasVideo = sdp.includes('m=video') && !sdp.includes('m=video 0');
+
           const answer = await pc.createAnswer({
             offerToReceiveAudio: true,
-            offerToReceiveVideo: callType === 'video'
+            offerToReceiveVideo: offerHasVideo || callType === 'video'
           });
           await pc.setLocalDescription(answer);
 
@@ -863,7 +900,11 @@ export const CallProvider = ({ children, activeUser }) => {
       const pc = peerConnectionRef.current;
       if (pc && payload.answer) {
         try {
-          await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
+          if (pc.signalingState === 'have-local-offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
+          } else {
+            console.log('Skipping answer setRemoteDescription, current signalingState:', pc.signalingState);
+          }
 
           // Drain queued ICE candidates
           while (pendingIceCandidatesRef.current.length > 0) {
@@ -1003,6 +1044,7 @@ export const CallProvider = ({ children, activeUser }) => {
         connectionStatus,
         localStream,
         remoteStream,
+        screenStream,
         callHistory,
         isHistoryLoading,
         startCall,
