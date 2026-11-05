@@ -1191,7 +1191,9 @@ export default function ChatView() {
     isStatusCreatorOpen,
     setIsStatusCreatorOpen,
     isStatusPrivacyOpen,
-    setIsStatusPrivacyOpen
+    setIsStatusPrivacyOpen,
+    aiQueryMode = 'auto',
+    changeAiQueryMode = () => {}
   } = useTaskContext();
 
   const [clearChatConfirm, setClearChatConfirm] = useState(false);
@@ -1558,7 +1560,7 @@ export default function ChatView() {
     try {
       const result = await stopRecording();
       if (result && result.dataUrl) {
-        sendChatMessage(activeChannelId, '', null, null, result.dataUrl, null);
+        sendChatMessage(activeChannelId, '', null, null, result.dataUrl, null, null, false, aiQueryMode);
         isAutoScrollEnabled.current = true;
         setIsAtBottom(true);
         setTimeout(() => scrollToBottom('smooth'), 50);
@@ -1589,7 +1591,8 @@ export default function ChatView() {
       null, // audioUrl
       selectedFile ? selectedFile : null, // fileAttachment
       taggedUser ? taggedUser.id : null,
-      requireEaFollowup
+      requireEaFollowup,
+      aiQueryMode
     );
 
     setMessageInput('');
@@ -2261,6 +2264,26 @@ export default function ChatView() {
                 <span className="header-label-tablet">Sheets</span>
                 <span style={{ fontSize: '0.62rem', background: 'var(--color-success)', color: '#fff', padding: '1px 5px', borderRadius: '8px', fontWeight: 800 }}>8</span>
               </button>
+            )}
+
+            {activeChannel.type === 'ai' && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '5px 9px',
+                  borderRadius: '10px',
+                  background: aiQueryMode === 'production' ? '#f0fdf4' : (aiQueryMode === 'accessory' ? '#f5f3ff' : '#f0f9ff'),
+                  border: aiQueryMode === 'production' ? '1px solid #bbf7d0' : (aiQueryMode === 'accessory' ? '1px solid #ddd6fe' : '1px solid #bae6fd'),
+                  color: aiQueryMode === 'production' ? '#16a34a' : (aiQueryMode === 'accessory' ? '#8b5cf6' : '#0284c7'),
+                  fontSize: '0.74rem',
+                  fontWeight: 700
+                }}
+                title={`Active AI Mode: ${aiQueryMode === 'production' ? 'Garment Production' : (aiQueryMode === 'accessory' ? 'Trims & Accessories' : 'Auto Smart Detect')}`}
+              >
+                <span>{aiQueryMode === 'production' ? '✂️ Production' : (aiQueryMode === 'accessory' ? '🧵 Accessory' : '🌐 Auto')}</span>
+              </div>
             )}
 
             {/* Clear Chat History Button */}
@@ -3158,8 +3181,18 @@ export default function ChatView() {
                                 )}
                               </button>
                             )}
-                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                              PulseBot AI
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <span>PulseBot AI</span>
+                              {msg.aiMode === 'production' && (
+                                <span style={{ fontSize: '0.6rem', background: '#dcfce7', color: '#16a34a', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                  ✂️ Production
+                                </span>
+                              )}
+                              {msg.aiMode === 'accessory' && (
+                                <span style={{ fontSize: '0.6rem', background: '#f3e8ff', color: '#7c3aed', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                  🧵 Accessory
+                                </span>
+                              )}
                             </span>
                           </div>
 
@@ -3465,6 +3498,103 @@ export default function ChatView() {
           />
 
           <form onSubmit={handleSend} className="chat-input-form" style={{ padding: '0', display: 'flex', flexDirection: 'column', gap: '0.45rem', position: 'relative', margin: 0 }}>
+            {/* PulseBot AI Data Mode Selector (Auto / Production / Accessory) */}
+            {activeChannel.type === 'ai' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '5px 10px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+                  gap: '8px',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles style={{ width: '13px', height: '13px', color: '#0284c7' }} />
+                    <span>AI Mode:</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => changeAiQueryMode('auto')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: aiQueryMode === 'auto' ? 700 : 500,
+                      background: aiQueryMode === 'auto' ? '#0284c7' : '#f8fafc',
+                      color: aiQueryMode === 'auto' ? '#ffffff' : '#475569',
+                      border: aiQueryMode === 'auto' ? '1px solid #0284c7' : '1px solid #e2e8f0',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Auto-detect between Garment Production and Accessories based on prompt"
+                  >
+                    <span>🌐 Auto (Smart)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => changeAiQueryMode('production')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: aiQueryMode === 'production' ? 700 : 500,
+                      background: aiQueryMode === 'production' ? '#16a34a' : '#f8fafc',
+                      color: aiQueryMode === 'production' ? '#ffffff' : '#475569',
+                      border: aiQueryMode === 'production' ? '1px solid #16a34a' : '1px solid #e2e8f0',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Strictly query Garment Production (Cutting, Lots, Job Orders, WIP)"
+                  >
+                    <span>✂️ Production Data</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => changeAiQueryMode('accessory')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: aiQueryMode === 'accessory' ? 700 : 500,
+                      background: aiQueryMode === 'accessory' ? '#8b5cf6' : '#f8fafc',
+                      color: aiQueryMode === 'accessory' ? '#ffffff' : '#475569',
+                      border: aiQueryMode === 'accessory' ? '1px solid #8b5cf6' : '1px solid #e2e8f0',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Strictly query Trims & Accessories (Stock, Godown Racks, Issue Logs)"
+                  >
+                    <span>🧵 Accessory Data</span>
+                  </button>
+                </div>
+
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                  {aiQueryMode === 'production' && <span style={{ color: '#16a34a' }}>● Production Mode Active</span>}
+                  {aiQueryMode === 'accessory' && <span style={{ color: '#8b5cf6' }}>● Accessory Mode Active</span>}
+                  {aiQueryMode === 'auto' && <span style={{ color: '#0284c7' }}>● Hybrid Auto Mode</span>}
+                </div>
+              </div>
+            )}
+
             {/* Executive Tagged User & EA Follow-up Bar */}
             {taggedUser && (
               <div
@@ -3700,7 +3830,15 @@ export default function ChatView() {
                   {/* Message Input Textbox */}
                   <input
                     type="text"
-                    placeholder={activeChannel.type === 'ai' ? 'Ask PulseBot AI anything or type a prompt...' : 'Message'}
+                    placeholder={
+                      activeChannel.type === 'ai'
+                        ? aiQueryMode === 'production'
+                          ? 'Ask about Lots, Cutting Floor, Orders, WIP (Production Mode)...'
+                          : aiQueryMode === 'accessory'
+                          ? 'Ask about Trims, Stock, Godown Racks, Issue Logs (Accessory Mode)...'
+                          : 'Ask PulseBot AI anything or type a prompt...'
+                        : 'Message'
+                    }
                     value={messageInput}
                     onChange={handleInputChange}
                     onKeyDown={(e) => {

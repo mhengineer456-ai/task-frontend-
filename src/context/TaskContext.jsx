@@ -283,6 +283,14 @@ export const TaskProvider = ({ children }) => {
     document.documentElement.setAttribute('data-accent', accentTheme);
   }, [accentTheme]);
 
+  // AI Query Data Mode ('auto' | 'production' | 'accessory')
+  const [aiQueryMode, setAiQueryMode] = useState(() => safeGetLocalStorage('pulsebot_ai_mode', 'auto'));
+
+  const changeAiQueryMode = (mode) => {
+    setAiQueryMode(mode);
+    safeSetLocalStorage('pulsebot_ai_mode', mode);
+  };
+
   const [isBackendConnected, setIsBackendConnected] = useState(false);
 
   useEffect(() => {
@@ -2101,7 +2109,8 @@ export const TaskProvider = ({ children }) => {
     audioUrl = null,
     fileAttachment = null,
     taggedUserId = null,
-    requireEaFollowup = false
+    requireEaFollowup = false,
+    overrideAiMode = null
   ) => {
     if (!text?.trim() && !taskAttachment && !imageUrl && !audioUrl && !fileAttachment && !taggedUserId) return;
 
@@ -2167,7 +2176,7 @@ export const TaskProvider = ({ children }) => {
     if (isAiTarget && (text || imageUrl || taggedUserId)) {
       setTimeout(() => {
         const promptText = (text || '').trim() || (imageUrl ? 'Please check this image and identify the Lot Number and production details.' : '');
-        generatePulseBotAiReply(promptText, imageUrl, taggedUserId, requireEaFollowup, channelId);
+        generatePulseBotAiReply(promptText, imageUrl, taggedUserId, requireEaFollowup, channelId, overrideAiMode || aiQueryMode);
       }, 600);
     }
   };
@@ -2509,9 +2518,10 @@ export const TaskProvider = ({ children }) => {
     setActiveStatusStory(null);
   };
 
-  const generatePulseBotAiReply = async (userPrompt, imageUrl = null, taggedUserId = null, requireEaFollowup = false, targetChannelId = null) => {
+  const generatePulseBotAiReply = async (userPrompt, imageUrl = null, taggedUserId = null, requireEaFollowup = false, targetChannelId = null, overrideAiMode = null) => {
     setIsAiTyping(true);
     const resolvedChannelId = targetChannelId || (activeUser?.id ? `chan-ai-${activeUser.id}` : 'chan-ai');
+    const selectedMode = overrideAiMode || aiQueryMode || 'auto';
     let replyText = '';
     let isN8n = false;
     let pdfAttachment = null;
@@ -2530,7 +2540,8 @@ export const TaskProvider = ({ children }) => {
         channelId: resolvedChannelId,
         userId: activeUser?.id || 'usr-1',
         taggedUserId,
-        requireEaFollowup
+        requireEaFollowup,
+        aiMode: selectedMode
       });
 
       if (res && res.success && res.message) {
@@ -2783,6 +2794,9 @@ export const TaskProvider = ({ children }) => {
         deleteEaDailyTask,
         isBackendConnected,
         isAiTyping,
+        aiQueryMode,
+        changeAiQueryMode,
+        setAiQueryMode,
         realtimeToasts,
         dismissRealtimeToast,
         triggerRealtimeToast,
