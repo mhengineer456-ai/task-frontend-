@@ -861,6 +861,8 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
           key={`tbl-${elements.length}`}
           style={{
             overflowX: 'auto',
+            maxHeight: '480px',
+            overflowY: 'auto',
             margin: '10px 0',
             borderRadius: '10px',
             border: isSelf ? '1px solid rgba(255,255,255,0.25)' : '1px solid #cbd5e1',
@@ -880,7 +882,10 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
             <thead>
               <tr
                 style={{
-                  background: isSelf ? 'rgba(255,255,255,0.14)' : '#f8fafc',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                  background: isSelf ? '#1e293b' : '#f1f5f9',
                   borderBottom: isSelf ? '2px solid rgba(255,255,255,0.25)' : '2px solid #cbd5e1'
                 }}
               >
