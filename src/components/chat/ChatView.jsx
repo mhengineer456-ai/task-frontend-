@@ -2954,19 +2954,25 @@ export default function ChatView() {
                         }
 
                         if (isAi && !isSelf) {
-                          return (
-                            <PulseBotMessageRenderer
-                              text={msg.text}
-                              onSendFollowup={(promptText) => {
-                                setMessageInput(promptText);
-                              }}
-                              onDelete={() => {
-                                if (window.confirm('Delete this AI response?')) {
-                                  deleteChatMessage(msg.id, activeChannelId);
-                                }
-                              }}
-                            />
-                          );
+                          // Dedicated lot pipeline renderer only for garment cutting lot reports
+                          const hasMarkdownTable = /\|[^\n]+\|\s*\n\s*\|[-:\s|]+\|/.test(msg.text);
+                          const isGarmentLotsReport = !hasMarkdownTable && /Lot\s+\d+:\s*(?:JO|\*)/i.test(msg.text);
+
+                          if (isGarmentLotsReport) {
+                            return (
+                              <PulseBotMessageRenderer
+                                text={msg.text}
+                                onSendFollowup={(promptText) => {
+                                  setMessageInput(promptText);
+                                }}
+                                onDelete={() => {
+                                  if (window.confirm('Delete this AI response?')) {
+                                    deleteChatMessage(msg.id, activeChannelId);
+                                  }
+                                }}
+                              />
+                            );
+                          }
                         }
 
                         return msg.text ? (
