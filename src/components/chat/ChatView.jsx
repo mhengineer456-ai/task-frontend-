@@ -654,6 +654,12 @@ const formatInlineTokens = (line, isSelf, onImageClick = null, suppressImages = 
 // AI Assistant Suggested Prompts (Apple Intelligence Experience)
 const AI_SUGGESTED_PROMPTS = [
   {
+    icon: '🧰',
+    title: 'Accessory Storage & Solutions',
+    desc: 'Complete overview of materials, low-stock reorder alerts, weight scale verification, and actionable solutions.',
+    prompt: 'Accessory SQL storage overview and operational solutions'
+  },
+  {
     icon: '⚖️',
     title: 'Accessory Weight & Trims',
     desc: 'Verify gross/tare machine weight, lot trim orders, and piece counts.',
@@ -2335,9 +2341,16 @@ export default function ChatView() {
               📊 Linked Sheets Hub (8)
             </button>
             <button
-              onClick={() => handleQuickAiPrompt('Accessory software database status and table counts')}
+              onClick={() => handleQuickAiPrompt('Accessory SQL storage overview and operational solutions')}
               className="btn btn-secondary"
               style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', background: 'rgba(124, 58, 237, 0.1)', borderColor: 'rgba(124, 58, 237, 0.3)', color: '#7c3aed', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}
+            >
+              🧰 Accessory Storage & Solutions
+            </button>
+            <button
+              onClick={() => handleQuickAiPrompt('Accessory software database status and table counts')}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', background: 'rgba(124, 58, 237, 0.05)', borderColor: 'rgba(124, 58, 237, 0.2)', color: '#7c3aed', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
             >
               🧵 Accessory SQL: Live
             </button>
