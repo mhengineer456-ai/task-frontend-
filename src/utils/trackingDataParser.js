@@ -128,6 +128,11 @@ function normalizeTrackingData(data) {
 function parseTrackingDataFromText(text) {
   if (!text) return null;
 
+  // Safety check: if text is accessory issuance, issue_logs, accessory stock, or materials storage, NEVER parse as garment production tracking card!
+  if (/verified accessory|issue_logs|accessory\s*issue|accessory\s*stock|materials?\s*storage/i.test(text)) {
+    return null;
+  }
+
   // Must mention a Lot number and department/production trail
   const hasLot = /(?:lot|lot number|lot no\.?|lot\s*#|#)\s*:?-?\s*([A-Za-z0-9_-]+)/i.test(text);
   const hasTrail = /department|cutting|stitching|packing|process date|audit trail|production journey|job order/i.test(text);
