@@ -2624,7 +2624,7 @@ export const TaskProvider = ({ children }) => {
         const inProg = tasks.filter(t => t.status === 'In Progress' || t.status === 'Review').length;
         replyText = `📈 Current System Task Summary:\n• Total Active Tasks: ${total}\n• Completed / Approved: ${completed} (${Math.round((completed/total)*100)}%)\n• In Progress / Review: ${inProg}\n\nLet me know if you would like me to inspect a specific team or department!`;
       } else {
-        replyText = `🤖 Hello ${activeUser?.name || 'User'}! I am PulseBot AI, powered by your live n8n AI Agent workflow. Ask me any questions and I will process them through the connected workflow!`;
+        replyText = `⚠️ Server response timed out or connection was briefly interrupted. Please try asking your query again.`;
       }
     }
 
