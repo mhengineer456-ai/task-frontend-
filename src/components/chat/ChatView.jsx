@@ -299,20 +299,30 @@ const ChatInlineImage = ({ src, alt, title, onExpand, isSelf }) => {
   );
 };
 
-// Multi-Image Gallery component for party / uncut lots photo collections
+// Multi-Image Gallery component for party / uncut lots photo collections or accessory materials
 const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
   if (!gallery || !Array.isArray(gallery) || gallery.length === 0) return null;
 
-  // Extract unique garments
-  const categories = ['ALL', ...new Set(gallery.map(g => (g.garment || 'Garment').toUpperCase()))];
+  // Check if this gallery is for accessory materials
+  const isAccessoryGallery = gallery.some(item =>
+    item.category ||
+    item.caption ||
+    ['PATCH', 'TAGS', 'TAG', 'LABELS', 'LABEL', 'BUTTONS', 'ZIP', 'DORI', 'TRIMS'].includes((item.garment || '').toUpperCase()) ||
+    !item.lotNumber
+  );
+
+  // Extract unique categories
+  const categories = ['ALL', ...new Set(gallery.map(g => (g.garment || g.category || 'Item').toUpperCase()))];
 
   const filtered = gallery.filter(item => {
-    const matchesCat = selectedCategory === 'ALL' || (item.garment || '').toUpperCase() === selectedCategory;
+    const matchesCat = selectedCategory === 'ALL' || (item.garment || item.category || '').toUpperCase() === selectedCategory;
     const term = searchTerm.toLowerCase().trim();
     const matchesSearch = !term ||
+      String(item.title || '').toLowerCase().includes(term) ||
+      String(item.caption || '').toLowerCase().includes(term) ||
       String(item.lotNumber || '').includes(term) ||
       String(item.jobOrder || '').toLowerCase().includes(term) ||
       String(item.garment || '').toLowerCase().includes(term) ||
@@ -320,6 +330,18 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
       String(item.fabric || '').toLowerCase().includes(term);
     return matchesCat && matchesSearch;
   });
+
+  const bannerTitle = isAccessoryGallery
+    ? `Verified Accessory Stock Photos (${gallery.length} Items)`
+    : `Official Design Artwork Gallery (${gallery.length} Designs)`;
+
+  const countBadge = isAccessoryGallery
+    ? `${filtered.length} of ${gallery.length} Items`
+    : `${filtered.length} of ${gallery.length} Lots`;
+
+  const searchPlaceholder = isAccessoryGallery
+    ? 'Filter by item/location...'
+    : 'Filter by lot/fabric...';
 
   return (
     <div
@@ -347,14 +369,14 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '1.2rem' }}>📸</span>
+          <span style={{ fontSize: '1.2rem' }}>{isAccessoryGallery ? '🧰' : '📸'}</span>
           <span style={{ fontWeight: 800, fontSize: '0.9rem', letterSpacing: '-0.01em' }}>
-            Official Design Artwork Gallery ({gallery.length} Designs)
+            {bannerTitle}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.22)', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-            {filtered.length} of {gallery.length} Lots
+            {countBadge}
           </span>
         </div>
       </div>
@@ -373,7 +395,7 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
       >
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: 1 }}>
           {categories.map(cat => {
-            const count = cat === 'ALL' ? gallery.length : gallery.filter(g => (g.garment || '').toUpperCase() === cat).length;
+            const count = cat === 'ALL' ? gallery.length : gallery.filter(g => (g.garment || g.category || '').toUpperCase() === cat).length;
             const isSelected = selectedCategory === cat;
             return (
               <button
@@ -403,7 +425,7 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
         </div>
         <input
           type="text"
-          placeholder="Filter by lot/fabric..."
+          placeholder={searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
@@ -411,7 +433,7 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
             borderRadius: '8px',
             padding: '4px 10px',
             fontSize: '0.74rem',
-            width: '150px',
+            width: '170px',
             outline: 'none',
             background: isSelf ? 'rgba(255, 255, 255, 0.95)' : '#ffffff',
             color: '#0f172a'
@@ -498,39 +520,49 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
                   borderRadius: '6px'
                 }}
               >
-                Lot {item.lotNumber}
+                {item.lotNumber ? `Lot ${item.lotNumber}` : (item.category || item.garment || 'Accessory')}
               </div>
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '6px',
-                  right: '6px',
-                  background: 'rgba(2, 132, 199, 0.92)',
-                  color: '#ffffff',
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  padding: '2px 6px',
-                  borderRadius: '6px'
-                }}
-              >
-                {item.jobOrder || ''}
-              </div>
+              {item.jobOrder ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '6px',
+                    background: 'rgba(2, 132, 199, 0.92)',
+                    color: '#ffffff',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '6px'
+                  }}
+                >
+                  {item.jobOrder}
+                </div>
+              ) : null}
             </div>
 
-            {/* Lot Details Bottom Bar */}
+            {/* Details Bottom Bar */}
             <div style={{ padding: '8px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {item.garment || 'Garment'}
+                {item.title || item.name || item.garment || 'Material'}
               </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Style: <span style={{ fontWeight: 600, color: '#1e293b' }}>{item.style || 'Standard'}</span>
-              </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Fabric: <span style={{ fontWeight: 700, color: '#0284c7' }}>{item.fabric || 'Standard'}</span>
-              </div>
+              {item.caption ? (
+                <div style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: '1.3' }}>
+                  {item.caption}
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Style: <span style={{ fontWeight: 600, color: '#1e293b' }}>{item.style || 'Standard'}</span>
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Fabric: <span style={{ fontWeight: 700, color: '#0284c7' }}>{item.fabric || 'Standard'}</span>
+                  </div>
+                </>
+              )}
               <div style={{ marginTop: 'auto', paddingTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', fontSize: '0.65rem' }}>
-                <span style={{ color: '#64748b', fontWeight: 600 }}>Qty: {item.qty || '1 Lot'}</span>
-                <span style={{ color: '#0284c7', fontWeight: 700 }}>🔍 Full Size</span>
+                {item.qty && <span style={{ color: '#64748b', fontWeight: 600 }}>Qty: {item.qty}</span>}
+                <span style={{ color: '#0284c7', fontWeight: 700, marginLeft: 'auto' }}>🔍 Full View</span>
               </div>
             </div>
           </div>
@@ -763,7 +795,16 @@ const AppleCodeBlock = ({ code, language = 'text' }) => {
 const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages = false) => {
   if (!text) return null;
 
-  const lines = text.split('\n');
+  // 1. Join any markdown images that were broken across lines (e.g. "![AMIRI]\n(https://...)")
+  let cleanText = text.replace(/!\[(.*?)\]\s*\n+\s*\((https?:\/\/[^\s)]+)\)/g, '![$1]($2)');
+
+  // 2. Strip any raw/bare Cloudinary URLs that might be in the text so URLs are NEVER printed to user
+  cleanText = cleanText.replace(/(?:^|\s)\(?https?:\/\/res\.cloudinary\.com\/[^\s\)\>]+\)?(?:\s|$)/gm, ' ');
+
+  // 3. Clean up empty bullets left by stripped URLs (e.g. "• \n" or "* \n")
+  cleanText = cleanText.replace(/^\s*[*•-]\s*$/gm, '');
+
+  const lines = cleanText.split('\n');
   const elements = [];
   let i = 0;
 
@@ -3097,11 +3138,10 @@ export default function ChatView() {
 
                       {/* 4c. Design Artwork / Style Image Card */}
                       {(() => {
+                        const gallery = extractImageGallery(msg);
+                        if (gallery && gallery.length > 0) return null;
                         const imgInfo = extractImageInfo(msg);
                         if (!imgInfo) return null;
-                        if (msg.text && (msg.text.includes(imgInfo.url) || msg.text.includes(imgInfo.rawUrl))) {
-                          return null;
-                        }
                         return (
                           <div style={{ marginTop: '0.75rem' }}>
                             <ChatInlineImage
