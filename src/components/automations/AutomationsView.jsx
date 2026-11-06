@@ -1,14 +1,26 @@
 import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
 import { priorityLevels } from '../../data/mockData';
-import { Zap, Plus, ShieldAlert } from 'lucide-react';
+import { Zap, Plus, ShieldAlert, Clock, ArrowRight } from 'lucide-react';
 
 export default function AutomationsView() {
-  const { automations, toggleAutomation, addAutomation } = useTaskContext();
+  const {
+    automations,
+    toggleAutomation,
+    addAutomation,
+    tasks = [],
+    users = [],
+    setIsCreateModalOpen,
+    setSelectedTaskId,
+    dispatchScheduledTaskNow
+  } = useTaskContext();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ruleName, setRuleName] = useState('');
   const [ruleTrigger, setRuleTrigger] = useState('Task is Overdue by 24+ Hours');
   const [ruleAction, setRuleAction] = useState('Escalate Priority to Critical');
+
+  const scheduledTasks = tasks.filter(t => t.status === 'Scheduled' || (t.isScheduled && !t.dispatchedAt));
 
   const handleCreateRule = () => {
     if (!ruleName.trim()) return;
@@ -36,9 +48,103 @@ export default function AutomationsView() {
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Configure automated background rules, escalation triggers, and recurring task schedules.</p>
         </div>
 
-        <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
-          <Plus style={{ width: '16px', height: '16px' }} /> Create Automation Rule
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-secondary" style={{ fontSize: '0.75rem' }}>
+            <Clock style={{ width: '15px', height: '15px', color: '#8b5cf6' }} /> Schedule Task Dispatch
+          </button>
+          <button onClick={() => setIsModalOpen(true)} className="btn btn-primary" style={{ fontSize: '0.75rem' }}>
+            <Plus style={{ width: '16px', height: '16px' }} /> Create Automation Rule
+          </button>
+        </div>
+      </div>
+
+      {/* Live Zapier-Style Scheduled Task Triggers */}
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid rgba(139, 92, 246, 0.25)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(168, 85, 247, 0.04))' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap style={{ width: '16px', height: '16px' }} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Zapier Scheduled Task Pipeline
+                <span className="badge badge-purple" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                  {scheduledTasks.length} Queued
+                </span>
+              </h3>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                Automated scheduler polls every 10 seconds. Tasks trigger right on time and notify assigned employees.
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary" style={{ fontSize: '0.72rem', padding: '0.35rem 0.75rem' }}>
+            + Allot New Scheduled Task
+          </button>
+        </div>
+
+        {scheduledTasks.length === 0 ? (
+          <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+            ⚡ No tasks waiting for scheduled dispatch. Click "+ Allot New Scheduled Task" to queue an automated task.
+          </div>
+        ) : (
+          <div className="table-container" style={{ margin: 0 }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Task ID</th>
+                  <th>Title</th>
+                  <th>Target Assignee</th>
+                  <th>Trigger Time</th>
+                  <th>Priority</th>
+                  <th>Manual Override</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scheduledTasks.map(t => {
+                  const assignee = users.find(u => u.id === t.assigneeId);
+                  return (
+                    <tr key={t.id}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--brand-light)' }}>
+                        <span style={{ cursor: 'pointer' }} onClick={() => setSelectedTaskId(t.id)}>{t.id}</span>
+                      </td>
+                      <td style={{ fontWeight: 700 }}>
+                        <span style={{ cursor: 'pointer' }} onClick={() => setSelectedTaskId(t.id)}>{t.title}</span>
+                      </td>
+                      <td>{assignee?.name || t.assigneeId}</td>
+                      <td>
+                        <span style={{ color: '#8b5cf6', fontWeight: 700, fontSize: '0.75rem' }}>
+                          ⏰ {t.scheduledAt ? new Date(t.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Ready'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${t.priority === 'Critical' ? 'badge-rose' : t.priority === 'Urgent' ? 'badge-amber' : 'badge-brand'}`}>
+                          {t.priority}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => dispatchScheduledTaskNow(t.id)}
+                          className="btn btn-primary"
+                          style={{
+                            fontSize: '0.68rem',
+                            padding: '0.2rem 0.55rem',
+                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            border: 'none',
+                            color: '#fff',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ⚡ Dispatch Now
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Rules Grid */}

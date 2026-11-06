@@ -614,12 +614,38 @@ export const TaskProvider = ({ children }) => {
         return [newTask, ...prev];
       });
 
+      // If task is scheduled for future dispatch, do not alert assignee until triggered
+      if (newTask.status === 'Scheduled' || (newTask.isScheduled && !newTask.dispatchedAt)) {
+        if (newTask.creatorId === activeUser?.id) {
+          triggerRealtimeToast({
+            title: '⏰ Task Scheduled in Automations',
+            message: `"${newTask.title}" scheduled for dispatch at ${newTask.scheduledAt || 'allotted time'}.`,
+            type: 'info',
+            taskId: newTask.id
+          });
+        }
+        return;
+      }
+
       if (newTask.creatorId !== activeUser?.id || newTask.assigneeId === activeUser?.id) {
         triggerRealtimeToast({
           title: 'New Task Created',
           message: `📋 "${newTask.title}" (${newTask.id}) assigned to ${newTask.assigneeName || 'team'}.`,
           type: 'assignment',
           taskId: newTask.id
+        });
+      }
+    };
+
+    const handleScheduledTaskTriggered = (triggeredTask) => {
+      if (!triggeredTask || !triggeredTask.id) return;
+      setTasks(prev => prev.map(t => t.id === triggeredTask.id ? { ...t, ...triggeredTask, status: 'Assigned', isScheduled: false } : t));
+      if (triggeredTask.assigneeId === activeUser?.id) {
+        triggerRealtimeToast({
+          title: '⚡ Scheduled Task Activated',
+          message: `📋 Task "${triggeredTask.title}" (${triggeredTask.id}) is now active on your task list.`,
+          type: 'assignment',
+          taskId: triggeredTask.id
         });
       }
     };
@@ -842,6 +868,7 @@ export const TaskProvider = ({ children }) => {
     };
 
     s.on('task:created', handleTaskCreated);
+    s.on('task:scheduled_triggered', handleScheduledTaskTriggered);
     s.on('task:updated', handleTaskUpdated);
     s.on('task:deleted', handleTaskDeleted);
     s.on('task:followup', handleTaskFollowup);
@@ -860,6 +887,7 @@ export const TaskProvider = ({ children }) => {
 
     return () => {
       s.off('task:created', handleTaskCreated);
+      s.off('task:scheduled_triggered', handleScheduledTaskTriggered);
       s.off('task:updated', handleTaskUpdated);
       s.off('task:deleted', handleTaskDeleted);
       s.off('task:followup', handleTaskFollowup);
@@ -1056,6 +1084,28 @@ export const TaskProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [activeTimer]);
 
+  // Client-side safety ticker for Zapier-style scheduled tasks (every 10s)
+  useEffect(() => {
+    const checkScheduled = () => {
+      const now = Date.now();
+      const readyTasks = tasks.filter(t => 
+        (t.status === 'Scheduled' || t.isScheduled) &&
+        t.scheduledAt &&
+        !t.dispatchedAt &&
+        new Date(t.scheduledAt).getTime() <= now
+      );
+
+      if (readyTasks.length > 0) {
+        readyTasks.forEach(task => {
+          dispatchScheduledTaskNow(task.id);
+        });
+      }
+    };
+
+    const interval = setInterval(checkScheduled, 10000);
+    return () => clearInterval(interval);
+  }, [tasks]);
+
   // Helper Audit Logger (capped at 50 recent items)
   const addAuditLog = (action, details, category = 'Task') => {
     const newLog = {
@@ -1087,6 +1137,10 @@ export const TaskProvider = ({ children }) => {
   const addTask = (taskData) => {
     const nextIdNum = tasks.length + deletedTasks.length + 1008;
     const assignedUser = users.find(u => u.id === taskData.assigneeId) || users[0] || activeUser;
+    const isScheduledTask = Boolean(taskData.isScheduled || taskData.status === 'Scheduled');
+    const scheduledAtTime = isScheduledTask ? (taskData.scheduledAt || null) : null;
+    const initialStatus = isScheduledTask ? 'Scheduled' : (taskData.status || 'Assigned');
+
     const newTask = {
       id: taskData.id || `TSK-${nextIdNum}`,
       title: taskData.title,
@@ -1101,7 +1155,10 @@ export const TaskProvider = ({ children }) => {
       backupPersonId: taskData.backupPersonId || '',
       watchers: taskData.watchers || [activeUser?.id],
       priority: taskData.priority || 'Normal',
-      status: taskData.status || 'Assigned',
+      status: initialStatus,
+      isScheduled: isScheduledTask,
+      scheduledAt: scheduledAtTime,
+      dispatchedAt: null,
       startDate: taskData.startDate || new Date().toISOString().slice(0, 16),
       dueDate: taskData.dueDate || new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16),
       estimatedHours: Number(taskData.estimatedHours) || 8,
@@ -1122,7 +1179,9 @@ export const TaskProvider = ({ children }) => {
           id: `act-${Date.now()}`,
           timestamp: new Date().toISOString(),
           userId: activeUser?.id,
-          action: `Task created by ${activeUser?.name || 'User'} and assigned to ${assignedUser?.name || 'Assignee'}`
+          action: isScheduledTask
+            ? `Task scheduled by ${activeUser?.name || 'User'} for automated dispatch to ${assignedUser?.name || 'Assignee'} at ${scheduledAtTime || 'allotted time'}`
+            : `Task created by ${activeUser?.name || 'User'} and assigned to ${assignedUser?.name || 'Assignee'}`
         }
       ]
     };
@@ -1135,15 +1194,25 @@ export const TaskProvider = ({ children }) => {
         }
       })
       .catch(err => console.warn('Task create API sync warning:', err));
-    addAuditLog('TASK_CREATE', `Created task ${newTask.id}: "${newTask.title}"`);
-    sendNotification(
-      'New Task Assigned',
-      `📋 Task "${newTask.title}" (${newTask.id}) assigned to ${assignedUser?.name || 'Assignee'}`,
-      'assignment',
-      newTask.id
-    );
 
-    checkAutomationsOnTaskCreate(newTask);
+    if (isScheduledTask) {
+      addAuditLog('TASK_SCHEDULE', `Scheduled task ${newTask.id}: "${newTask.title}" for auto-dispatch at ${scheduledAtTime}`);
+      triggerRealtimeToast({
+        title: '⚡ Zapier Automation Queued',
+        message: `Task "${newTask.title}" (${newTask.id}) scheduled for automatic dispatch to ${assignedUser?.name || 'assignee'} at ${scheduledAtTime ? new Date(scheduledAtTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'allotted time'}.`,
+        type: 'info',
+        taskId: newTask.id
+      });
+    } else {
+      addAuditLog('TASK_CREATE', `Created task ${newTask.id}: "${newTask.title}"`);
+      sendNotification(
+        'New Task Assigned',
+        `📋 Task "${newTask.title}" (${newTask.id}) assigned to ${assignedUser?.name || 'Assignee'}`,
+        'assignment',
+        newTask.id
+      );
+      checkAutomationsOnTaskCreate(newTask);
+    }
   };
 
   const addDailyFollowup = (taskId, followupData) => {
@@ -1317,6 +1386,41 @@ export const TaskProvider = ({ children }) => {
         .catch(err => console.warn('Task restore API sync warning:', err));
       addAuditLog('TASK_RESTORE', `Restored task ${taskId} from recycle bin`);
     }
+  };
+
+  const dispatchScheduledTaskNow = async (taskId) => {
+    try {
+      const res = await taskService.dispatchScheduledTaskNow(taskId);
+      if (res && res.success && res.task) {
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...res.task, status: 'Assigned', isScheduled: false } : t));
+        triggerRealtimeToast({
+          title: '⚡ Task Dispatched Successfully',
+          message: `Task ${taskId} has been triggered and dispatched to the employee's active task list.`,
+          type: 'success',
+          taskId
+        });
+        return res.task;
+      }
+    } catch (err) {
+      console.warn('Backend dispatch warning, applying local fallback dispatch:', err);
+    }
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          status: 'Assigned',
+          isScheduled: false,
+          dispatchedAt: new Date().toISOString()
+        };
+      }
+      return t;
+    }));
+    triggerRealtimeToast({
+      title: '⚡ Task Dispatched',
+      message: `Task ${taskId} dispatched to assignee.`,
+      type: 'success',
+      taskId
+    });
   };
 
   const changeTaskStatus = (taskId, newStatus, remark = '') => {
@@ -2756,6 +2860,7 @@ export const TaskProvider = ({ children }) => {
         pauseTimer,
         stopTimer,
         addTask,
+        dispatchScheduledTaskNow,
         updateTask,
         deleteTask,
         restoreTask,

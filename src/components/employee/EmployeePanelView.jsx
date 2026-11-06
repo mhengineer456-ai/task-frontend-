@@ -23,7 +23,7 @@ export default function EmployeePanelView() {
     setSelectedTaskId
   } = useTaskContext();
 
-  const myTasks = tasks.filter(t => t.assigneeId === activeUser.id);
+  const myTasks = tasks.filter(t => t.assigneeId === activeUser.id && t.status !== 'Scheduled' && !(t.isScheduled && !t.dispatchedAt));
   const dueToday = myTasks.filter(t => isDueToday(t.dueDate));
   const overdue = myTasks.filter(t => isOverdue(t.dueDate, t.status));
   const completed = myTasks.filter(t => t.status === 'Completed' || t.status === 'Approved');

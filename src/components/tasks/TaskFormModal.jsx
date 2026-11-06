@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
-import { X, Sparkles, Plus, Trash2, FileText } from 'lucide-react';
+import { X, Sparkles, Plus, Trash2, FileText, Zap, Clock, Calendar } from 'lucide-react';
 
 export default function TaskFormModal({ isOpen, onClose, taskToEdit = null }) {
   const {
@@ -41,7 +41,9 @@ export default function TaskFormModal({ isOpen, onClose, taskToEdit = null }) {
       { id: 'ck-2', text: 'Implement core functionality', completed: false }
     ],
     dependencies: [],
-    remarks: ''
+    remarks: '',
+    isScheduled: false,
+    scheduledAt: ''
   });
 
   useEffect(() => {
@@ -66,7 +68,9 @@ export default function TaskFormModal({ isOpen, onClose, taskToEdit = null }) {
           tagsStr: (taskToEdit.tags || []).join(', '),
           checklist: taskToEdit.checklist || [],
           dependencies: taskToEdit.dependencies || [],
-          remarks: taskToEdit.remarks || ''
+          remarks: taskToEdit.remarks || '',
+          isScheduled: Boolean(taskToEdit.isScheduled || taskToEdit.status === 'Scheduled'),
+          scheduledAt: taskToEdit.scheduledAt || ''
         });
       } else {
         setFormData({
@@ -91,7 +95,9 @@ export default function TaskFormModal({ isOpen, onClose, taskToEdit = null }) {
             { id: 'ck-2', text: 'Implement deliverables and milestones', completed: false }
           ],
           dependencies: [],
-          remarks: ''
+          remarks: '',
+          isScheduled: false,
+          scheduledAt: ''
         });
       }
     }
@@ -137,16 +143,48 @@ export default function TaskFormModal({ isOpen, onClose, taskToEdit = null }) {
     }));
   };
 
+  const setQuickSchedule = (minutesFromNow) => {
+    const target = new Date(Date.now() + minutesFromNow * 60 * 1000);
+    const tzOffset = target.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(target.getTime() - tzOffset).toISOString().slice(0, 16);
+    setFormData(prev => ({
+      ...prev,
+      isScheduled: true,
+      scheduledAt: localISOTime
+    }));
+  };
+
+  const setTomorrowMorningSchedule = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    const tzOffset = tomorrow.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(tomorrow.getTime() - tzOffset).toISOString().slice(0, 16);
+    setFormData(prev => ({
+      ...prev,
+      isScheduled: true,
+      scheduledAt: localISOTime
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
     const tagsArray = formData.tagsStr.split(',').map(s => s.trim()).filter(Boolean);
+    const isScheduledTask = Boolean(formData.isScheduled);
+    const finalPayload = {
+      ...formData,
+      tags: tagsArray,
+      status: isScheduledTask ? 'Scheduled' : formData.status,
+      isScheduled: isScheduledTask,
+      scheduledAt: isScheduledTask ? formData.scheduledAt : null
+    };
 
     if (taskToEdit) {
-      updateTask(taskToEdit.id, { ...formData, tags: tagsArray });
+      updateTask(taskToEdit.id, finalPayload);
     } else {
-      addTask({ ...formData, tags: tagsArray });
+      addTask(finalPayload);
     }
 
     onClose();
@@ -290,6 +328,129 @@ export default function TaskFormModal({ isOpen, onClose, taskToEdit = null }) {
             <div className="form-group">
               <label className="form-label">Tags (Comma Separated)</label>
               <input type="text" value={formData.tagsStr} onChange={(e) => setFormData({ ...formData, tagsStr: e.target.value })} className="input-text" />
+            </div>
+
+            {/* Zapier-Style Scheduled Task Dispatch Automation */}
+            <div style={{
+              background: formData.isScheduled ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))' : 'var(--bg-sidebar)',
+              border: formData.isScheduled ? '1.5px solid #8b5cf6' : '1px solid var(--border-color)',
+              borderRadius: '12px',
+              padding: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              transition: 'all 0.2s ease',
+              marginTop: '0.25rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: formData.isScheduled ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--border-color)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    boxShadow: formData.isScheduled ? '0 2px 10px rgba(139, 92, 246, 0.35)' : 'none'
+                  }}>
+                    <Zap style={{ width: '17px', height: '17px' }} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        Automated Scheduled Dispatch
+                      </span>
+                      <span style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '999px',
+                        background: 'rgba(139, 92, 246, 0.15)',
+                        color: '#8b5cf6',
+                        border: '1px solid rgba(139, 92, 246, 0.3)'
+                      }}>
+                        ⚡ Zapier Automation
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                      Allot dispatch time. The task stays hidden from the employee until that allotted time, then automatically triggers into their task list with an audio alert.
+                    </p>
+                  </div>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.isScheduled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setFormData(prev => ({
+                        ...prev,
+                        isScheduled: enabled,
+                        scheduledAt: enabled && !prev.scheduledAt ? new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16) : prev.scheduledAt
+                      }));
+                    }}
+                    style={{ width: '18px', height: '18px', accentColor: '#8b5cf6', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: formData.isScheduled ? '#8b5cf6' : 'var(--text-secondary)' }}>
+                    {formData.isScheduled ? 'Enabled' : 'Disabled'}
+                  </span>
+                </label>
+              </div>
+
+              {formData.isScheduled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', paddingTop: '0.65rem', borderTop: '1px dashed rgba(139, 92, 246, 0.35)' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', alignItems: 'center' }}>
+                    <div style={{ flex: '1 1 230px' }}>
+                      <label className="form-label" style={{ fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#8b5cf6', fontWeight: 700 }}>
+                        <Clock style={{ width: '13px', height: '13px' }} />
+                        Dispatch Trigger Date & Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        required={formData.isScheduled}
+                        value={formData.scheduledAt}
+                        onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
+                        className="input-text"
+                        style={{ borderColor: '#8b5cf6', fontWeight: 700 }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: '2 1 290px' }}>
+                      <label className="form-label" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        Quick Time Presets
+                      </label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <button type="button" onClick={() => setQuickSchedule(15)} className="btn-secondary" style={{ fontSize: '0.7rem', padding: '0.25rem 0.55rem' }}>+15 Mins</button>
+                        <button type="button" onClick={() => setQuickSchedule(60)} className="btn-secondary" style={{ fontSize: '0.7rem', padding: '0.25rem 0.55rem' }}>+1 Hour</button>
+                        <button type="button" onClick={() => setQuickSchedule(240)} className="btn-secondary" style={{ fontSize: '0.7rem', padding: '0.25rem 0.55rem' }}>+4 Hours</button>
+                        <button type="button" onClick={setTomorrowMorningSchedule} className="btn-secondary" style={{ fontSize: '0.7rem', padding: '0.25rem 0.55rem' }}>Tomorrow 9 AM</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {formData.scheduledAt && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      fontSize: '0.75rem',
+                      color: '#6366f1',
+                      background: 'rgba(99, 102, 241, 0.09)',
+                      padding: '0.4rem 0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(99, 102, 241, 0.2)'
+                    }}>
+                      <Calendar style={{ width: '13px', height: '13px' }} />
+                      <span>
+                        Auto-dispatch scheduled for: <strong>{new Date(formData.scheduledAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

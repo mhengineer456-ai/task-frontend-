@@ -26,19 +26,21 @@ import QuickFollowupModal from '../tasks/QuickFollowupModal';
 export default function MyTasksView() {
   const {
     tasks,
+    users = [],
     activeUser,
     changeTaskStatus,
     changeTaskPriority,
     startTimer,
     setSelectedTaskId,
     pinnedTaskIds = [],
-    togglePinTask
+    togglePinTask,
+    dispatchScheduledTaskNow
   } = useTaskContext();
 
   const [activeTab, setActiveTab] = useState('assigned');
   const [progressModalTaskId, setProgressModalTaskId] = useState(null);
 
-  const assignedToMe = tasks.filter(t => t.assigneeId === activeUser?.id);
+  const assignedToMe = tasks.filter(t => t.assigneeId === activeUser?.id && t.status !== 'Scheduled' && !(t.isScheduled && !t.dispatchedAt));
   const createdByMe = tasks.filter(t => t.creatorId === activeUser?.id);
   const followingMe = tasks.filter(t => (t.watchers || []).includes(activeUser?.id));
   const waitingApproval = tasks.filter(t => t.approvalOwnerId === activeUser?.id && t.status === 'Review');
@@ -46,12 +48,14 @@ export default function MyTasksView() {
   const overdueTasks = assignedToMe.filter(t => isOverdue(t.dueDate, t.status));
   const completedTasks = assignedToMe.filter(t => t.status === 'Completed' || t.status === 'Approved');
   const pinnedTasks = assignedToMe.filter(t => pinnedTaskIds.includes(t.id));
+  const scheduledTasks = tasks.filter(t => (t.status === 'Scheduled' || (t.isScheduled && !t.dispatchedAt)) && (t.creatorId === activeUser?.id || activeUser?.role === 'Manager' || activeUser?.role === 'Admin'));
 
   let filteredTasks = assignedToMe;
   if (activeTab === 'pinned') filteredTasks = pinnedTasks;
   else if (activeTab === 'today') filteredTasks = todayTasks;
   else if (activeTab === 'upcoming') filteredTasks = assignedToMe.filter(t => new Date(t.dueDate) > new Date() && !isDueToday(t.dueDate));
   else if (activeTab === 'overdue') filteredTasks = overdueTasks;
+  else if (activeTab === 'scheduled') filteredTasks = scheduledTasks;
   else if (activeTab === 'created') filteredTasks = createdByMe;
   else if (activeTab === 'following') filteredTasks = followingMe;
   else if (activeTab === 'approval') filteredTasks = waitingApproval;
@@ -68,6 +72,9 @@ export default function MyTasksView() {
 
   const tabs = [
     { id: 'assigned', label: 'Assigned to Me', count: assignedToMe.length },
+    ...(scheduledTasks.length > 0 || activeUser?.role === 'Manager' || activeUser?.role === 'Admin' ? [
+      { id: 'scheduled', label: '⚡ Scheduled Automations', count: scheduledTasks.length, badgeClass: 'badge-purple' }
+    ] : []),
     { id: 'pinned', label: '⭐ Pinned', count: pinnedTasks.length, badgeClass: 'badge-amber' },
     { id: 'today', label: 'Due Today', count: todayTasks.length, badgeClass: 'badge-brand' },
     { id: 'overdue', label: 'Overdue', count: overdueTasks.length, badgeClass: 'badge-rose' },
@@ -278,8 +285,8 @@ export default function MyTasksView() {
                       <span className={`badge ${t.priority === 'Critical' ? 'badge-rose' : t.priority === 'Urgent' ? 'badge-amber' : 'badge-brand'}`}>
                         {t.priority}
                       </span>
-                      <span className={`badge ${isDone ? 'badge-emerald' : isLate ? 'badge-rose' : 'badge-cyan'}`}>
-                        {t.status}
+                      <span className={`badge ${t.status === 'Scheduled' ? 'badge-purple' : isDone ? 'badge-emerald' : isLate ? 'badge-rose' : 'badge-cyan'}`} style={t.status === 'Scheduled' ? { background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.3)' } : {}}>
+                        {t.status === 'Scheduled' ? '⚡ Scheduled' : t.status}
                       </span>
                     </div>
                   </div>
@@ -316,6 +323,53 @@ export default function MyTasksView() {
                       <span style={{ fontWeight: 700, color: checklistDone === checklistTotal ? '#10b981' : 'var(--text-secondary)' }}>
                         {Math.round((checklistDone / checklistTotal) * 100)}%
                       </span>
+                    </div>
+                  )}
+
+                  {/* Scheduled Automation Banner */}
+                  {(t.status === 'Scheduled' || (t.isScheduled && !t.dispatchedAt)) && (
+                    <div style={{
+                      marginTop: '0.65rem',
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(99, 102, 241, 0.08))',
+                      border: '1px solid rgba(139, 92, 246, 0.28)',
+                      borderRadius: '8px',
+                      padding: '0.55rem 0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.72rem', color: '#8b5cf6' }}>
+                        <Zap style={{ width: '14px', height: '14px', color: '#8b5cf6', flexShrink: 0 }} />
+                        <span>
+                          <strong>Zapier Automation:</strong> Dispatches at {t.scheduledAt ? new Date(t.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Allotted Time'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (dispatchScheduledTaskNow) dispatchScheduledTaskNow(t.id);
+                        }}
+                        className="btn btn-primary"
+                        style={{
+                          fontSize: '0.68rem',
+                          padding: '0.22rem 0.6rem',
+                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                          border: 'none',
+                          color: '#fff',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          cursor: 'pointer'
+                        }}
+                        title="Force immediate trigger to employee"
+                      >
+                        <Zap style={{ width: '11px', height: '11px' }} />
+                        Dispatch Now
+                      </button>
                     </div>
                   )}
 

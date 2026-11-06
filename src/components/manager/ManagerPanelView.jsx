@@ -14,7 +14,8 @@ import {
   Plus,
   ArrowRight,
   ShieldCheck,
-  Briefcase
+  Briefcase,
+  Zap
 } from 'lucide-react';
 
 export default function ManagerPanelView() {
@@ -26,11 +27,12 @@ export default function ManagerPanelView() {
     rejectTask,
     reassignTask,
     setSelectedTaskId,
-    setIsCreateModalOpen
+    setIsCreateModalOpen,
+    dispatchScheduledTaskNow
   } = useTaskContext();
 
   const [inspectEmployeeId, setInspectEmployeeId] = useState(null);
-  const [activeTab, setActiveTab] = useState('directReports'); // directReports, approvals, workload
+  const [activeTab, setActiveTab] = useState('directReports'); // directReports, approvals, workload, scheduled
 
   // Find direct reports (employees whose manager is this active user)
   const directReports = users.filter(u => u.managerName === activeUser.name || u.id !== activeUser.id && (activeUser.role === 'Admin' || activeUser.department === u.department));
@@ -39,6 +41,7 @@ export default function ManagerPanelView() {
   const directReportTaskIds = directReports.map(u => u.id);
   const teamTasks = tasks.filter(t => directReportTaskIds.includes(t.assigneeId));
   const pendingTeamApprovals = teamTasks.filter(t => t.status === 'Review');
+  const scheduledTasks = tasks.filter(t => (t.status === 'Scheduled' || (t.isScheduled && !t.dispatchedAt)));
 
   return (
     <div className="view-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -143,6 +146,9 @@ export default function ManagerPanelView() {
         </button>
         <button onClick={() => { setActiveTab('workload'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'workload' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.5rem 1rem', borderRadius: '99px' }}>
           <Briefcase style={{ width: '14px', height: '14px' }} /> Team Task Delegation
+        </button>
+        <button onClick={() => { setActiveTab('scheduled'); setInspectEmployeeId(null); }} className={`btn ${activeTab === 'scheduled' ? 'btn-primary' : 'btn-secondary'}`} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '0.5rem 1rem', borderRadius: '99px' }}>
+          <Zap style={{ width: '14px', height: '14px', color: '#8b5cf6' }} /> Scheduled Automations ({scheduledTasks.length})
         </button>
       </div>
 
@@ -272,6 +278,105 @@ export default function ManagerPanelView() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* TAB 4: SCHEDULED AUTOMATIONS (ZAPIER-STYLE DISPATCH) */}
+      {activeTab === 'scheduled' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '12px', padding: '1rem 1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap style={{ width: '18px', height: '18px' }} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>Zapier Task Dispatch Automations</h4>
+                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Staged tasks are held until the allotted dispatch time, then automatically delivered to the employee with real-time sound alerts.
+                </p>
+              </div>
+            </div>
+            <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem' }}>
+              + Schedule New Task
+            </button>
+          </div>
+
+          {scheduledTasks.length === 0 ? (
+            <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <Clock style={{ width: '36px', height: '36px', margin: '0 auto 0.75rem', opacity: 0.4 }} />
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>No Scheduled Tasks in Queue</h4>
+              <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>When you create a task with "Automated Scheduled Dispatch", it will appear here waiting for its trigger time.</p>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Task ID</th>
+                    <th>Title</th>
+                    <th>Target Assignee</th>
+                    <th>Allotted Trigger Time</th>
+                    <th>Priority</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduledTasks.map(t => {
+                    const assignee = users.find(u => u.id === t.assigneeId);
+                    const isPassed = t.scheduledAt && new Date(t.scheduledAt).getTime() <= Date.now();
+                    return (
+                      <tr key={t.id}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--brand-light)' }}>
+                          <span style={{ cursor: 'pointer' }} onClick={() => setSelectedTaskId(t.id)}>{t.id}</span>
+                        </td>
+                        <td style={{ fontWeight: 700 }}>
+                          <span style={{ cursor: 'pointer' }} onClick={() => setSelectedTaskId(t.id)}>{t.title}</span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <img src={assignee?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(assignee?.name || 'User')}`} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%' }} />
+                            <span>{assignee?.name || t.assigneeId}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: isPassed ? '#10b981' : '#8b5cf6', fontWeight: 700 }}>
+                            <Clock style={{ width: '13px', height: '13px' }} />
+                            <span>{t.scheduledAt ? new Date(t.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Ready'}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge ${t.priority === 'Critical' ? 'badge-rose' : t.priority === 'Urgent' ? 'badge-amber' : 'badge-brand'}`}>
+                            {t.priority}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => dispatchScheduledTaskNow(t.id)}
+                            className="btn btn-primary"
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '0.25rem 0.65rem',
+                              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              border: 'none',
+                              color: '#fff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              borderRadius: '6px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Zap style={{ width: '12px', height: '12px' }} />
+                            Dispatch Now
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

@@ -17,6 +17,10 @@ export const taskService = {
     return await apiClient.post(`/tasks/${taskId}/followups`, followupData);
   },
 
+  async dispatchScheduledTaskNow(taskId) {
+    return await apiClient.post(`/tasks/${taskId}/dispatch-now`);
+  },
+
   async deleteTask(taskId) {
     return await apiClient.delete(`/tasks/${taskId}`);
   }
