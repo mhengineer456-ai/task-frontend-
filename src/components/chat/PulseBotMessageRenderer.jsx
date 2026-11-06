@@ -50,11 +50,9 @@ export default function PulseBotMessageRenderer({
     if (!text || typeof text !== 'string') return '';
     return text
       // Fix **Key: ** Val -> **Key**: Val
-      .replace(/\*\*([^*:\n]+):\s*\*\*/g, '**$1:**')
+      .replace(/\*\*([^*:\n]+?):\s*\*\*/g, '**$1:**')
       // Fix **Key : ** -> **Key:**
-      .replace(/\*\*([^*:\n]+)\s*:\s*\*\*/g, '**$1:**')
-      // Fix trailing spaces inside bold (DO NOT cross newlines!)
-      .replace(/\*\*([^*:\n]+)\s+\*\*/g, '**$1**')
+      .replace(/\*\*([^*:\n]+?)\s*:\s*\*\*/g, '**$1:**')
       // Normalize lot header bullets
       .replace(/^(\d+)\.\s+\*\*Lot\s+(\d+)\*\*/gm, '$1. Lot $2');
   }, [text]);

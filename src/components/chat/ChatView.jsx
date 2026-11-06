@@ -673,9 +673,8 @@ const formatInlineTokens = (line, isSelf, onImageClick = null, suppressImages = 
     if (typeof part !== 'string') return part;
     // Normalize broken bold tokens in this part first
     const normPart = part
-      .replace(/\*\*([^*:\n]+):\s*\*\*/g, '**$1:**')
-      .replace(/\*\*([^*:\n]+)\s*:\s*\*\*/g, '**$1:**')
-      .replace(/\*\*([^*:\n]+)\s+\*\*/g, '**$1**');
+      .replace(/\*\*([^*:\n]+?):\s*\*\*/g, '**$1:**')
+      .replace(/\*\*([^*:\n]+?)\s*:\s*\*\*/g, '**$1:**');
     const boldSegments = normPart.split(/(\*\*.*?\*\*)/g);
     return boldSegments.map((seg, sIdx) => {
       if (seg.startsWith('**') && seg.endsWith('**') && seg.length >= 4) {
@@ -803,9 +802,8 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
 
   // 0. Pre-clean and normalize broken / spaced bold markdown tags
   let cleanText = text
-    .replace(/\*\*([^*:\n]+):\s*\*\*/g, '**$1:**')
-    .replace(/\*\*([^*:\n]+)\s*:\s*\*\*/g, '**$1:**')
-    .replace(/\*\*([^*:\n]+)\s+\*\*/g, '**$1**');
+    .replace(/\*\*([^*:\n]+?):\s*\*\*/g, '**$1:**')
+    .replace(/\*\*([^*:\n]+?)\s*:\s*\*\*/g, '**$1:**');
 
   // 1. Join any markdown images that were broken across lines (e.g. "![AMIRI]\n(https://...)")
   cleanText = cleanText.replace(/!\[(.*?)\]\s*\n+\s*\((https?:\/\/[^\s)]+)\)/g, '![$1]($2)');
