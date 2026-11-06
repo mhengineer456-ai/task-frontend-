@@ -39,6 +39,8 @@ import {
   Loader2,
   AtSign,
   Zap,
+  Clock,
+  Calendar,
   ArrowLeft,
   Copy,
   Check,
@@ -1288,6 +1290,8 @@ export default function ChatView() {
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [tagSearch, setTagSearch] = useState('');
   const [requireEaFollowup, setRequireEaFollowup] = useState(false);
+  const [isSchedulingTask, setIsSchedulingTask] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState('');
   const [mobileActivePane, setMobileActivePane] = useState('roster');
 
   const { startCall } = useCallContext();
@@ -1656,7 +1660,7 @@ export default function ChatView() {
 
   const handleSend = (e) => {
     e.preventDefault();
-    if (!messageInput.trim() && !selectedTaskAttach && !selectedImage && !selectedFile && !taggedUser) return;
+    if (!messageInput.trim() && !selectedTaskAttach && !selectedImage && !selectedFile && !taggedUser && !isSchedulingTask) return;
 
     if (sendTypingStatus && activeUser?.name) {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -1689,13 +1693,17 @@ export default function ChatView() {
       selectedFile ? selectedFile : null, // fileAttachment
       effectiveTaggedUserId,
       requireEaFollowup,
-      aiQueryMode
+      aiQueryMode,
+      isSchedulingTask,
+      isSchedulingTask ? scheduledTime : null
     );
 
     setMessageInput('');
     setSelectedTaskAttach('');
     setTaggedUser(null);
     setRequireEaFollowup(false);
+    setIsSchedulingTask(false);
+    setScheduledTime('');
     setSelectedImage(null);
     setSelectedFile(null);
     setShowEmojiPicker(false);
@@ -3889,154 +3897,376 @@ export default function ChatView() {
               </div>
             )}
 
-            {/* Executive Tagged User & EA Follow-up Bar */}
-            {taggedUser && (
+            {/* Executive Tagged User, Schedule Dispatch & EA Follow-up Bar */}
+            {(taggedUser || isSchedulingTask) && (
               <div
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  flexDirection: 'column',
+                  gap: '8px',
                   background: '#ffffff',
-                  border: requireEaFollowup ? '1px solid #fde68a' : '1px solid #cbd5e1',
+                  border: isSchedulingTask ? '1px solid #c4b5fd' : (requireEaFollowup ? '1px solid #fde68a' : '1px solid #cbd5e1'),
                   borderRadius: '12px',
                   padding: '8px 14px',
-                  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.06)',
-                  gap: '12px'
+                  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.06)'
                 }}
               >
-                {/* Assignee Information */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <AtSign style={{ width: '13px', height: '13px', color: '#0284c7' }} />
-                    <span>Assignee:</span>
-                  </span>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: '#f1f5f9',
-                      border: '1px solid #e2e8f0',
-                      padding: '3px 10px 3px 5px',
-                      borderRadius: '20px',
-                      color: '#0f172a'
-                    }}
-                  >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '10px'
+                  }}
+                >
+                  {/* Assignee Information */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <AtSign style={{ width: '13px', height: '13px', color: '#0284c7' }} />
+                      <span>Assignee:</span>
+                    </span>
+                    {taggedUser ? (
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: '#f1f5f9',
+                          border: '1px solid #e2e8f0',
+                          padding: '3px 10px 3px 5px',
+                          borderRadius: '20px',
+                          color: '#0f172a'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '22px',
+                            height: '22px',
+                            borderRadius: '50%',
+                            background: '#0284c7',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            overflow: 'hidden',
+                            position: 'relative'
+                          }}
+                        >
+                          {taggedUser.avatar && (taggedUser.avatar.startsWith('data:') || taggedUser.avatar.startsWith('http') || taggedUser.avatar.startsWith('/')) ? (
+                            <img
+                              src={taggedUser.avatar}
+                              alt={taggedUser.name || 'avatar'}
+                              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (taggedUser.avatar && taggedUser.avatar.length <= 4) ? (
+                            <span>{taggedUser.avatar}</span>
+                          ) : (
+                            <span>{taggedUser.name?.[0]?.toUpperCase() || '👤'}</span>
+                          )}
+                        </div>
+                        <span style={{ fontWeight: 800, fontSize: '0.8125rem' }}>{taggedUser.name}</span>
+                        <span
+                          style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: taggedUser.role === 'EA' ? '#fef3c7' : '#e0f2fe',
+                            color: taggedUser.role === 'EA' ? '#b45309' : '#0369a1'
+                          }}
+                        >
+                          {taggedUser.role} • {taggedUser.department || 'Operations'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setTaggedUser(null)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: '0 2px',
+                            fontSize: '12px',
+                            lineHeight: 1,
+                            fontWeight: 800
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                          title="Remove Assignee"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowTagMenu(true)}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px dashed #94a3b8',
+                          borderRadius: '16px',
+                          padding: '3px 10px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          color: '#0284c7',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        <span>+ Tag Assignee for Staged Task</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Actions Right: Schedule Dispatch & EA Follow-up */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {/* Schedule Dispatch Toggle */}
                     <div
-                      style={{
-                        width: '22px',
-                        height: '22px',
-                        borderRadius: '50%',
-                        background: '#0284c7',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        overflow: 'hidden',
-                        position: 'relative'
+                      onClick={() => {
+                        const next = !isSchedulingTask;
+                        setIsSchedulingTask(next);
+                        if (next && !scheduledTime) {
+                          const def = new Date(Date.now() + 3600000);
+                          const pad = n => String(n).padStart(2, '0');
+                          setScheduledTime(`${def.getFullYear()}-${pad(def.getMonth() + 1)}-${pad(def.getDate())}T${pad(def.getHours())}:${pad(def.getMinutes())}`);
+                        }
                       }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        background: isSchedulingTask ? '#f5f3ff' : '#f8fafc',
+                        border: isSchedulingTask ? '1px solid #c4b5fd' : '1px solid #e2e8f0',
+                        transition: 'all 0.2s ease',
+                        userSelect: 'none'
+                      }}
+                      title="Schedule task dispatch at a specific allotted time (Zapier Automation Pipeline)"
                     >
-                      {taggedUser.avatar && (taggedUser.avatar.startsWith('data:') || taggedUser.avatar.startsWith('http') || taggedUser.avatar.startsWith('/')) ? (
-                        <img
-                          src={taggedUser.avatar}
-                          alt={taggedUser.name || 'avatar'}
-                          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '16px',
+                          borderRadius: '10px',
+                          background: isSchedulingTask ? '#8b5cf6' : '#cbd5e1',
+                          position: 'relative',
+                          transition: 'background 0.2s ease'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '50%',
+                            background: '#ffffff',
+                            position: 'absolute',
+                            top: '2px',
+                            left: isSchedulingTask ? '14px' : '2px',
+                            transition: 'left 0.2s ease',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                           }}
                         />
-                      ) : (taggedUser.avatar && taggedUser.avatar.length <= 4) ? (
-                        <span>{taggedUser.avatar}</span>
-                      ) : (
-                        <span>{taggedUser.name?.[0]?.toUpperCase() || '👤'}</span>
-                      )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock style={{ width: '13px', height: '13px', color: isSchedulingTask ? '#7c3aed' : '#94a3b8' }} />
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isSchedulingTask ? '#6d28d9' : '#64748b' }}>
+                          Schedule Dispatch
+                        </span>
+                      </div>
                     </div>
-                    <span style={{ fontWeight: 800, fontSize: '0.8125rem' }}>{taggedUser.name}</span>
-                    <span
+
+                    {/* Executive Toggle Switch for EA Follow-Up */}
+                    <div
+                      onClick={() => setRequireEaFollowup(!requireEaFollowup)}
                       style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        background: taggedUser.role === 'EA' ? '#fef3c7' : '#e0f2fe',
-                        color: taggedUser.role === 'EA' ? '#b45309' : '#0369a1'
-                      }}
-                    >
-                      {taggedUser.role} • {taggedUser.department || 'Operations'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setTaggedUser(null)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#94a3b8',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
                         cursor: 'pointer',
-                        padding: '0 2px',
-                        fontSize: '12px',
-                        lineHeight: 1,
-                        fontWeight: 800
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        background: requireEaFollowup ? '#fffbeb' : '#f8fafc',
+                        border: requireEaFollowup ? '1px solid #fcd34d' : '1px solid #e2e8f0',
+                        transition: 'all 0.2s ease',
+                        userSelect: 'none'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                      onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
-                      title="Remove Assignee"
+                      title="Enable Executive Assistant (EA) for systematic progress monitoring & escalation"
                     >
-                      ✕
-                    </button>
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '16px',
+                          borderRadius: '10px',
+                          background: requireEaFollowup ? '#f59e0b' : '#cbd5e1',
+                          position: 'relative',
+                          transition: 'background 0.2s ease'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '50%',
+                            background: '#ffffff',
+                            position: 'absolute',
+                            top: '2px',
+                            left: requireEaFollowup ? '14px' : '2px',
+                            transition: 'left 0.2s ease',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Zap style={{ width: '13px', height: '13px', color: requireEaFollowup ? '#d97706' : '#94a3b8' }} />
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: requireEaFollowup ? '#b45309' : '#64748b' }}>
+                          EA Follow-Up
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Executive Toggle Switch for EA Follow-Up */}
-                <div
-                  onClick={() => setRequireEaFollowup(!requireEaFollowup)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    background: requireEaFollowup ? '#fffbeb' : '#f8fafc',
-                    border: requireEaFollowup ? '1px solid #fcd34d' : '1px solid #e2e8f0',
-                    transition: 'all 0.2s ease',
-                    userSelect: 'none'
-                  }}
-                  title="Enable Executive Assistant (EA) for systematic progress monitoring & escalation"
-                >
-                  {/* Toggle Track & Thumb */}
+                {/* Scheduled Dispatch Allotment Config Sub-Panel */}
+                {isSchedulingTask && (
                   <div
                     style={{
-                      width: '28px',
-                      height: '16px',
+                      background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+                      border: '1px solid #ddd6fe',
                       borderRadius: '10px',
-                      background: requireEaFollowup ? '#f59e0b' : '#cbd5e1',
-                      position: 'relative',
-                      transition: 'background 0.2s ease'
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '8px'
                     }}
                   >
-                    <div
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        background: '#ffffff',
-                        position: 'absolute',
-                        top: '2px',
-                        left: requireEaFollowup ? '14px' : '2px',
-                        transition: 'left 0.2s ease',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Zap style={{ width: '13px', height: '13px', color: requireEaFollowup ? '#d97706' : '#94a3b8' }} />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: requireEaFollowup ? '#b45309' : '#64748b' }}>
-                      EA Follow-Up
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#6d28d9', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock style={{ width: '13px', height: '13px', color: '#7c3aed' }} />
+                        <span>Allot Trigger Time:</span>
+                      </span>
+
+                      {/* Presets */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date(Date.now() + 15 * 60 * 1000);
+                          const pad = n => String(n).padStart(2, '0');
+                          setScheduledTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          padding: '2px 7px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          color: '#6d28d9',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        +15m
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date(Date.now() + 60 * 60 * 1000);
+                          const pad = n => String(n).padStart(2, '0');
+                          setScheduledTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          padding: '2px 7px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          color: '#6d28d9',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        +1 hour
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date(Date.now() + 4 * 60 * 60 * 1000);
+                          const pad = n => String(n).padStart(2, '0');
+                          setScheduledTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          padding: '2px 7px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          color: '#6d28d9',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        +4 hours
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 1);
+                          d.setHours(9, 0, 0, 0);
+                          const pad = n => String(n).padStart(2, '0');
+                          setScheduledTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          padding: '2px 7px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          color: '#6d28d9',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Tomorrow 9am
+                      </button>
+
+                      {/* Custom Datetime Input */}
+                      <input
+                        type="datetime-local"
+                        value={scheduledTime}
+                        onChange={(e) => setScheduledTime(e.target.value)}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #c4b5fd',
+                          borderRadius: '6px',
+                          padding: '2px 8px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#334155',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#7c3aed' }}>
+                      ⚡ Zapier Pipeline: Hidden from employee until trigger
                     </span>
                   </div>
-                </div>
+                )}
               </div>
             )}
             {/* Selected Attachments Preview Banner */}
@@ -4188,10 +4418,37 @@ export default function ChatView() {
                   >
                     <AtSign style={{ width: '18px', height: '18px' }} />
                   </button>
+
+                  {/* Schedule Dispatch (Allot Time) Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !isSchedulingTask;
+                      setIsSchedulingTask(next);
+                      if (next && !scheduledTime) {
+                        const def = new Date(Date.now() + 3600000);
+                        const pad = n => String(n).padStart(2, '0');
+                        setScheduledTime(`${def.getFullYear()}-${pad(def.getMonth() + 1)}-${pad(def.getDate())}T${pad(def.getHours())}:${pad(def.getMinutes())}`);
+                      }
+                      if (next && !taggedUser) {
+                        setShowTagMenu(true);
+                      }
+                      setShowEmojiPicker(false);
+                      setShowAttachMenu(false);
+                    }}
+                    className="apple-icon-btn whatsapp-icon-btn"
+                    style={{
+                      color: isSchedulingTask ? '#7c3aed' : 'var(--text-secondary)',
+                      background: isSchedulingTask ? 'rgba(139, 92, 246, 0.12)' : 'none'
+                    }}
+                    title="Schedule Task Dispatch (Zapier Automation)"
+                  >
+                    <Clock style={{ width: '18px', height: '18px' }} />
+                  </button>
                 </div>
 
-                {/* Circular Action Button: Send if text typed or user tagged, Mic if empty */}
-                {(messageInput.trim().length > 0 || taggedUser) ? (
+                {/* Circular Action Button: Send if text typed or user tagged or task scheduled, Mic if empty */}
+                {(messageInput.trim().length > 0 || taggedUser || isSchedulingTask) ? (
                   <button
                     type="submit"
                     className="apple-circle-action-btn whatsapp-circle-action-btn"

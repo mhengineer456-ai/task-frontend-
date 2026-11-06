@@ -18,8 +18,10 @@ import {
 import { useTaskContext } from '../../context/TaskContext';
 
 export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) {
-  const { setSelectedTaskId, setActiveView } = useTaskContext();
+  const { setSelectedTaskId, setActiveView, dispatchScheduledTaskNow } = useTaskContext();
   const [copied, setCopied] = useState(false);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [isDispatchedEarly, setIsDispatchedEarly] = useState(false);
 
   if (!delegatedTask || !delegatedTask.id) return null;
 
@@ -32,8 +34,12 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
     eaAssignedName = 'Executive Assistant',
     status = 'Assigned',
     priority = 'High',
-    dueDate
+    dueDate,
+    isScheduled = false,
+    scheduledAt = null
   } = delegatedTask;
+
+  const isTaskScheduled = Boolean((isScheduled || status === 'Scheduled') && !isDispatchedEarly);
 
   const handleCopyId = (e) => {
     e.stopPropagation();
@@ -59,9 +65,36 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
     }
   };
 
+  const handleOpenAutomations = (e) => {
+    e.stopPropagation();
+    if (setActiveView) {
+      setActiveView('automations');
+    }
+  };
+
+  const handleDispatchNow = async (e) => {
+    e.stopPropagation();
+    if (isDispatching || isDispatchedEarly) return;
+    setIsDispatching(true);
+    try {
+      if (dispatchScheduledTaskNow) {
+        await dispatchScheduledTaskNow(taskId);
+        setIsDispatchedEarly(true);
+      }
+    } catch (err) {
+      console.warn('Early dispatch error:', err);
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
   const formattedDueDate = dueDate
     ? new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '48 Hours from now';
+
+  const formattedScheduledAt = scheduledAt
+    ? new Date(scheduledAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : 'Allotted Trigger Time';
 
   // Role tag styling helper
   const getRoleBadgeStyle = (role = '') => {
@@ -88,7 +121,9 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
         background: isSelf
           ? 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)'
           : '#ffffff',
-        border: hasEaFollowup
+        border: isTaskScheduled
+          ? (isSelf ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid #ddd6fe')
+          : hasEaFollowup
           ? (isSelf ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid #fde68a')
           : (isSelf ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid #e2e8f0'),
         boxShadow: isSelf
@@ -105,7 +140,9 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
         style={{
           height: '3px',
           width: '100%',
-          background: hasEaFollowup
+          background: isTaskScheduled
+            ? 'linear-gradient(90deg, #f59e0b 0%, #8b5cf6 50%, #6366f1 100%)'
+            : hasEaFollowup
             ? 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%)'
             : 'linear-gradient(90deg, #0284c7 0%, #38bdf8 50%, #0369a1 100%)'
         }}
@@ -130,14 +167,28 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
               width: '26px',
               height: '26px',
               borderRadius: '8px',
-              background: hasEaFollowup ? '#fef3c7' : '#e0f2fe',
-              color: hasEaFollowup ? '#d97706' : '#0284c7',
+              background: isTaskScheduled
+                ? '#f5f3ff'
+                : hasEaFollowup
+                ? '#fef3c7'
+                : '#e0f2fe',
+              color: isTaskScheduled
+                ? '#7c3aed'
+                : hasEaFollowup
+                ? '#d97706'
+                : '#0284c7',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            {hasEaFollowup ? <Zap style={{ width: '15px', height: '15px' }} /> : <ShieldCheck style={{ width: '15px', height: '15px' }} />}
+            {isTaskScheduled ? (
+              <Clock style={{ width: '15px', height: '15px' }} />
+            ) : hasEaFollowup ? (
+              <Zap style={{ width: '15px', height: '15px' }} />
+            ) : (
+              <ShieldCheck style={{ width: '15px', height: '15px' }} />
+            )}
           </div>
           <div>
             <div
@@ -146,19 +197,49 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
                 fontWeight: 800,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
-                color: hasEaFollowup ? '#d97706' : '#0284c7',
+                color: isTaskScheduled
+                  ? '#7c3aed'
+                  : hasEaFollowup
+                  ? '#d97706'
+                  : '#0284c7',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px'
               }}
             >
-              <span>{hasEaFollowup ? 'AI Delegation • EA Follow-Up Active' : 'AI Copilot Task Delegation'}</span>
+              <span>
+                {isTaskScheduled
+                  ? '⚡ Zapier Pipeline • Scheduled Dispatch Active'
+                  : hasEaFollowup
+                  ? 'AI Delegation • EA Follow-Up Active'
+                  : 'AI Copilot Task Delegation'}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Task ID chip with Copy feedback */}
+        {/* Task ID chip with Copy feedback and Staged indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {isTaskScheduled && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: '#fef3c7',
+                color: '#b45309',
+                border: '1px solid #fde68a'
+              }}
+            >
+              <Clock style={{ width: '11px', height: '11px' }} />
+              <span>STAGED</span>
+            </span>
+          )}
+
           <button
             type="button"
             onClick={handleCopyId}
@@ -280,36 +361,145 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
             </div>
           </div>
 
-          {/* Real-Time Live Alert Badge */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 10px',
-              borderRadius: '20px',
-              background: isSelf ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
-              border: isSelf ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #a7f3d0',
-              fontSize: '11px',
-              fontWeight: 700,
-              color: isSelf ? '#6ee7b7' : '#047857'
-            }}
-          >
-            <span
+          {/* Real-Time Live Alert Badge or Staged Badge */}
+          {isTaskScheduled ? (
+            <div
               style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: '#10b981',
-                boxShadow: '0 0 8px #10b981',
-                display: 'inline-block'
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#b45309'
               }}
-            />
-            <span>Live System Alert Sent</span>
-          </div>
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#f59e0b',
+                  boxShadow: '0 0 8px #f59e0b',
+                  display: 'inline-block'
+                }}
+              />
+              <span>Staged: Hidden until trigger</span>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                background: isSelf ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
+                border: isSelf ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #a7f3d0',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: isSelf ? '#6ee7b7' : '#047857'
+              }}
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  boxShadow: '0 0 8px #10b981',
+                  display: 'inline-block'
+                }}
+              />
+              <span>Live System Alert Sent</span>
+            </div>
+          )}
         </div>
 
-        {/* 3. EA Follow-up Executive Module */}
+        {/* 3. Zapier Automated Trigger Staging Panel (When Scheduled) */}
+        {isTaskScheduled && (
+          <div
+            style={{
+              borderRadius: '12px',
+              padding: '14px 16px',
+              background: isSelf
+                ? 'linear-gradient(145deg, rgba(139, 92, 246, 0.12) 0%, rgba(99, 102, 241, 0.06) 100%)'
+                : 'linear-gradient(145deg, #fbf7ff 0%, #f5f3ff 100%)',
+              border: isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid #ddd6fe',
+              borderLeft: '4px solid #8b5cf6',
+              marginBottom: '14px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Zap style={{ width: '15px', height: '15px', color: '#8b5cf6' }} />
+                <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#7c3aed', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  Zapier Automated Dispatch Pipeline
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  color: '#6d28d9',
+                  background: 'rgba(139, 92, 246, 0.15)',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Clock style={{ width: '12px', height: '12px' }} />
+                <span>Allotted Trigger: {formattedScheduledAt}</span>
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', lineHeight: '1.5', color: isSelf ? '#cbd5e1' : '#475569', marginBottom: '10px' }}>
+              Task is securely queued in the background scheduler. At the allotted trigger time, it will automatically populate into <strong>{assignee.name || 'the employee'}</strong>'s active list with sound alert and notification.
+            </div>
+
+            {/* Inline Early Dispatch Override Action */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                disabled={isDispatching || isDispatchedEarly}
+                onClick={handleDispatchNow}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  background: isDispatchedEarly ? '#10b981' : 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: isDispatching || isDispatchedEarly ? 'default' : 'pointer',
+                  boxShadow: '0 2px 6px rgba(139, 92, 246, 0.25)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {isDispatchedEarly ? (
+                  <>
+                    <Check style={{ width: '13px', height: '13px' }} />
+                    <span>Dispatched & Activated</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap style={{ width: '13px', height: '13px' }} />
+                    <span>{isDispatching ? 'Dispatching...' : '⚡ Dispatch Now (Trigger Immediately)'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 4. EA Follow-up Executive Module */}
         {hasEaFollowup ? (
           <div
             style={{
@@ -347,7 +537,7 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
               Logged into the EA Control Center. Automatic execution checks, daily progress logging, and supervisor escalations are active.
             </div>
           </div>
-        ) : (
+        ) : !isTaskScheduled ? (
           <div
             style={{
               borderRadius: '10px',
@@ -365,9 +555,9 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
             <span>📌</span>
             <span>Standard team delegation protocol (Follow-up managed directly within workspace).</span>
           </div>
-        )}
+        ) : null}
 
-        {/* 4. Metadata Pills Grid */}
+        {/* 5. Metadata Pills Grid */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
           <div
             style={{
@@ -395,12 +585,18 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
               fontWeight: 700,
               padding: '4px 9px',
               borderRadius: '6px',
-              background: isSelf ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff',
-              color: isSelf ? '#93c5fd' : '#1d4ed8',
-              border: isSelf ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid #bfdbfe'
+              background: isTaskScheduled
+                ? (isSelf ? 'rgba(139, 92, 246, 0.2)' : '#f5f3ff')
+                : (isSelf ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff'),
+              color: isTaskScheduled
+                ? (isSelf ? '#c4b5fd' : '#7c3aed')
+                : (isSelf ? '#93c5fd' : '#1d4ed8'),
+              border: isTaskScheduled
+                ? (isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid #ddd6fe')
+                : (isSelf ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid #bfdbfe')
             }}
           >
-            <span>📋 {status}</span>
+            <span>{isTaskScheduled ? '⚡ Scheduled Automation' : `📋 ${status}`}</span>
           </div>
 
           <div
@@ -422,7 +618,7 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
           </div>
         </div>
 
-        {/* 5. Enterprise Action Buttons */}
+        {/* 6. Enterprise Action Buttons */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
@@ -451,6 +647,35 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
             <span>View in Task Board</span>
             <ExternalLink style={{ width: '13px', height: '13px' }} />
           </button>
+
+          {isTaskScheduled && (
+            <button
+              type="button"
+              onClick={handleOpenAutomations}
+              style={{
+                flex: 1,
+                minWidth: '140px',
+                padding: '9px 14px',
+                borderRadius: '9px',
+                background: isSelf ? 'rgba(139, 92, 246, 0.15)' : '#f5f3ff',
+                color: isSelf ? '#c4b5fd' : '#7c3aed',
+                border: isSelf ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid #ddd6fe',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <span>⚡ View in Automations</span>
+              <ArrowRight style={{ width: '13px', height: '13px' }} />
+            </button>
+          )}
 
           {hasEaFollowup && (
             <button

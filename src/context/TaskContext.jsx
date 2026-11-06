@@ -2214,7 +2214,9 @@ export const TaskProvider = ({ children }) => {
     fileAttachment = null,
     taggedUserId = null,
     requireEaFollowup = false,
-    overrideAiMode = null
+    overrideAiMode = null,
+    isScheduled = false,
+    scheduledAt = null
   ) => {
     if (!text?.trim() && !taskAttachment && !imageUrl && !audioUrl && !fileAttachment && !taggedUserId) return;
 
@@ -2232,6 +2234,8 @@ export const TaskProvider = ({ children }) => {
       fileAttachment: fileAttachment || null,
       taggedUserId: taggedUserId || null,
       requireEaFollowup: Boolean(requireEaFollowup),
+      isScheduled: Boolean(isScheduled),
+      scheduledAt: scheduledAt || null,
       reactions: {},
       timestamp: new Date().toISOString(),
       taskAttachment: taskAttachment || null,
@@ -2261,6 +2265,8 @@ export const TaskProvider = ({ children }) => {
       taskAttachment,
       taggedUserId: taggedUserId || null,
       requireEaFollowup: Boolean(requireEaFollowup),
+      isScheduled: Boolean(isScheduled),
+      scheduledAt: scheduledAt || null,
       isAi: false
     }).then(res => {
       if (res && res.success && res.message) {
@@ -2282,7 +2288,7 @@ export const TaskProvider = ({ children }) => {
     if (isAiTarget && (text || imageUrl || taggedUserId)) {
       setTimeout(() => {
         const promptText = (text || '').trim() || (imageUrl ? 'Please check this image and identify the Lot Number and production details.' : '') || (taggedUserId ? 'Operational task assignment' : '');
-        generatePulseBotAiReply(promptText, imageUrl, taggedUserId, requireEaFollowup, channelId, overrideAiMode || aiQueryMode);
+        generatePulseBotAiReply(promptText, imageUrl, taggedUserId, requireEaFollowup, channelId, overrideAiMode || aiQueryMode, isScheduled, scheduledAt);
       }, 600);
     }
   };
@@ -2624,7 +2630,7 @@ export const TaskProvider = ({ children }) => {
     setActiveStatusStory(null);
   };
 
-  const generatePulseBotAiReply = async (userPrompt, imageUrl = null, taggedUserId = null, requireEaFollowup = false, targetChannelId = null, overrideAiMode = null) => {
+  const generatePulseBotAiReply = async (userPrompt, imageUrl = null, taggedUserId = null, requireEaFollowup = false, targetChannelId = null, overrideAiMode = null, isScheduled = false, scheduledAt = null) => {
     setIsAiTyping(true);
     const resolvedChannelId = targetChannelId || (activeUser?.id ? `chan-ai-${activeUser.id}` : 'chan-ai');
     const selectedMode = overrideAiMode || aiQueryMode || 'auto';
@@ -2651,6 +2657,8 @@ export const TaskProvider = ({ children }) => {
         taggedUserRole: taggedUserObj?.role || null,
         taggedUserDepartment: taggedUserObj?.department || null,
         requireEaFollowup,
+        isScheduled,
+        scheduledAt,
         aiMode: selectedMode
       });
 
@@ -2668,6 +2676,7 @@ export const TaskProvider = ({ children }) => {
         if (delegatedTask && delegatedTask.id) {
           setTasks(prev => {
             if (prev.some(t => t.id === delegatedTask.id)) return prev;
+            const isSched = Boolean(delegatedTask.isScheduled || delegatedTask.status === 'Scheduled');
             return [{
               id: delegatedTask.id,
               title: delegatedTask.title,
@@ -2680,10 +2689,13 @@ export const TaskProvider = ({ children }) => {
               creatorId: delegatedTask.creator?.id || activeUser?.id,
               approvalOwnerId: activeUser?.id,
               priority: delegatedTask.priority || 'High',
-              status: delegatedTask.status || 'Assigned',
+              status: delegatedTask.status || (isSched ? 'Scheduled' : 'Assigned'),
+              isScheduled: isSched,
+              scheduledAt: delegatedTask.scheduledAt || null,
+              dispatchedAt: null,
               startDate: new Date().toISOString().slice(0, 16),
               dueDate: delegatedTask.dueDate || new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
-              tags: ['AI-Delegated', ...(delegatedTask.hasEaFollowup ? ['EA-Followup'] : [])],
+              tags: ['AI-Delegated', ...(isSched ? ['Scheduled-Dispatch'] : []), ...(delegatedTask.hasEaFollowup ? ['EA-Followup'] : [])],
               checklist: [],
               comments: [],
               activityLog: [
@@ -2691,7 +2703,9 @@ export const TaskProvider = ({ children }) => {
                   id: `act-${Date.now()}`,
                   timestamp: new Date().toISOString(),
                   userId: activeUser?.id,
-                  action: `Task created via AI Copilot by ${activeUser?.name} and assigned to ${delegatedTask.assignee?.name}`
+                  action: isSched
+                    ? `⚡ Task scheduled via AI Copilot by ${activeUser?.name} for ${delegatedTask.assignee?.name} at ${delegatedTask.scheduledAt}`
+                    : `Task created via AI Copilot by ${activeUser?.name} and assigned to ${delegatedTask.assignee?.name}`
                 }
               ],
               progress: 0,
@@ -2715,6 +2729,8 @@ export const TaskProvider = ({ children }) => {
         .replace(/^(create\s*task|task|assign\s*task|assign\s*to\s*[^:]+:|please|kripya|assign|plz|urgent)\s*/i, '')
         .trim() || `Operational assignment for ${targetUser.name}`;
       const capitalizedTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+      const isSchedFallback = Boolean(isScheduled);
+      const scheduledAtFallback = isSchedFallback ? (scheduledAt || new Date(Date.now() + 3600000).toISOString().slice(0, 16)) : null;
 
       delegatedTask = {
         id: newTaskId,
@@ -2734,13 +2750,19 @@ export const TaskProvider = ({ children }) => {
         },
         hasEaFollowup: Boolean(requireEaFollowup),
         eaAssignedName: 'Executive Assistant (NEHA)',
-        status: 'Assigned',
+        status: isSchedFallback ? 'Scheduled' : 'Assigned',
+        isScheduled: isSchedFallback,
+        scheduledAt: scheduledAtFallback,
         priority: 'High',
         dueDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
-        notificationDispatched: true
+        notificationDispatched: !isSchedFallback
       };
 
-      replyText = `Task successfully delegated to **${targetUser.name}** and dispatched to their workstation with live system alert.`;
+      if (isSchedFallback) {
+        replyText = `Task staged for **${targetUser.name}** and scheduled to trigger at **${scheduledAtFallback}**. Hidden from assignee until trigger.`;
+      } else {
+        replyText = `Task successfully delegated to **${targetUser.name}** and dispatched to their workstation with live system alert.`;
+      }
 
       // Save into frontend tasks state
       addTask({
@@ -2753,7 +2775,9 @@ export const TaskProvider = ({ children }) => {
         assigneeId: targetUser.id,
         creatorId: activeUser?.id,
         priority: 'High',
-        status: 'Assigned',
+        status: isSchedFallback ? 'Scheduled' : 'Assigned',
+        isScheduled: isSchedFallback,
+        scheduledAt: scheduledAtFallback,
         dueDate: delegatedTask.dueDate
       });
     }
