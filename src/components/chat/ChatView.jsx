@@ -1663,6 +1663,23 @@ export default function ChatView() {
       sendTypingStatus(activeChannelId, activeUser.name, false);
     }
 
+    // Auto-detect tagged user if not explicitly selected but typed with @
+    let effectiveTaggedUserId = taggedUser ? taggedUser.id : null;
+    if (!effectiveTaggedUserId && messageInput.includes('@')) {
+      const atMatch = messageInput.match(/@([a-zA-Z0-9_.\s]+?)(?:\s|$|:|,)/);
+      if (atMatch) {
+        const queryStr = atMatch[1].trim().toLowerCase();
+        const matched = users.find(u => {
+          const uName = (u.name || '').toLowerCase();
+          const uFirst = uName.split(' ')[0];
+          return uName === queryStr || uFirst === queryStr || uName.startsWith(queryStr);
+        });
+        if (matched) {
+          effectiveTaggedUserId = matched.id;
+        }
+      }
+    }
+
     sendChatMessage(
       activeChannelId,
       messageInput,
@@ -1670,7 +1687,7 @@ export default function ChatView() {
       selectedImage ? selectedImage.dataUrl : null,
       null, // audioUrl
       selectedFile ? selectedFile : null, // fileAttachment
-      taggedUser ? taggedUser.id : null,
+      effectiveTaggedUserId,
       requireEaFollowup,
       aiQueryMode
     );
@@ -2904,10 +2921,15 @@ export default function ChatView() {
                         const delegatedTask = msg.delegatedTask || (typeof msg.fileAttachment === 'object' && msg.fileAttachment?.delegatedTask) || (typeof msg.file_attachment === 'object' && msg.file_attachment?.delegatedTask);
 
                         if (delegatedTask) {
+                          const isRedundantBullets = msg.text && (
+                            msg.text.includes('Task Delegated') ||
+                            msg.text.includes('Task ID:') ||
+                            msg.text.includes('Assigned Officer:')
+                          );
                           return (
                             <div style={{ whiteSpace: 'normal', width: '100%' }}>
-                              {msg.text ? (
-                                <div style={{ marginBottom: '8px' }}>
+                              {msg.text && !isRedundantBullets ? (
+                                <div style={{ marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600, color: isSelf ? '#ffffff' : '#0f172a' }}>
                                   {renderFormattedMessageText(
                                     msg.text,
                                     isSelf,
@@ -3634,8 +3656,7 @@ export default function ChatView() {
               {/* Member list */}
               <div style={{ maxHeight: '210px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {(() => {
-                  const candidateUsers = users.filter(u => String(u.id) !== String(activeUser?.id));
-                  const listToFilter = candidateUsers.length > 0 ? candidateUsers : users;
+                  const listToFilter = users && users.length > 0 ? users : [];
                   const filtered = listToFilter.filter(u => {
                     if (!tagSearch.trim()) return true;
                     const q = tagSearch.toLowerCase();
@@ -3657,6 +3678,7 @@ export default function ChatView() {
 
                   return filtered.map(member => {
                     const isSelected = taggedUser && String(taggedUser.id) === String(member.id);
+                    const isCurrentUser = activeUser && String(activeUser.id) === String(member.id);
                     const roleLower = (member.role || '').toLowerCase();
                     const roleColor = roleLower.includes('ea')
                       ? { bg: '#fef3c7', text: '#b45309' }
@@ -3677,6 +3699,8 @@ export default function ChatView() {
                           if (messageInput.includes('@')) {
                             const updated = messageInput.replace(/@([a-zA-Z0-9_\s]*)$/, `@${member.name} `);
                             setMessageInput(updated);
+                          } else {
+                            setMessageInput(prev => prev ? `@${member.name} ${prev}` : `@${member.name} `);
                           }
                         }}
                         style={{
@@ -3699,64 +3723,37 @@ export default function ChatView() {
                           if (!isSelected) e.currentTarget.style.background = 'transparent';
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                          <div
-                            style={{
-                              width: '24px',
-                              height: '24px',
-                              borderRadius: '50%',
-                              background: roleColor.text,
-                              color: '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              flexShrink: 0,
-                              overflow: 'hidden',
-                              position: 'relative'
-                            }}
-                          >
-                            {member.avatar && (member.avatar.startsWith('data:') || member.avatar.startsWith('http') || member.avatar.startsWith('/')) ? (
-                              <img
-                                src={member.avatar}
-                                alt={member.name || 'avatar'}
-                                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                            ) : (member.avatar && member.avatar.length <= 4) ? (
-                              <span>{member.avatar}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: '#e0f2fe',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            overflow: 'hidden'
+                          }}>
+                            {member.avatar && (member.avatar.startsWith('http') || member.avatar.startsWith('data:') || member.avatar.startsWith('/')) ? (
+                              <img src={member.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.currentTarget.style.display = 'none'} />
                             ) : (
                               <span>{member.name?.[0]?.toUpperCase() || '👤'}</span>
                             )}
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary, #0f172a)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                              {member.name}
-                            </span>
-                            <span style={{ fontSize: '0.67rem', color: 'var(--text-muted, #64748b)' }}>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {member.name} {isCurrentUser && <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>(You)</span>}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                               {member.department || 'Operations'}
-                            </span>
+                            </div>
                           </div>
                         </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <span
-                            style={{
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              padding: '2px 5px',
-                              borderRadius: '4px',
-                              background: roleColor.bg,
-                              color: roleColor.text
-                            }}
-                          >
-                            {member.role || 'Member'}
-                          </span>
-                          {isSelected && <Check style={{ width: '13px', height: '13px', color: '#0284c7' }} />}
-                        </div>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: roleColor.bg, color: roleColor.text }}>
+                          {member.role || 'Member'}
+                        </span>
                       </button>
                     );
                   });

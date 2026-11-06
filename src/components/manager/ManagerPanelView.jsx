@@ -283,41 +283,109 @@ export default function ManagerPanelView() {
 
       {/* TAB 4: SCHEDULED AUTOMATIONS (ZAPIER-STYLE DISPATCH) */}
       {activeTab === 'scheduled' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '12px', padding: '1rem 1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap style={{ width: '18px', height: '18px' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Header Banner */}
+          <div className="glass-card" style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '1.25rem 1.5rem',
+            borderRadius: '16px',
+            borderLeft: '4px solid #4f46e5',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)',
+                color: '#4338ca',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800
+              }}>
+                <Zap style={{ width: '22px', height: '22px' }} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>Zapier Task Dispatch Automations</h4>
-                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Staged tasks are held until the allotted dispatch time, then automatically delivered to the employee with real-time sound alerts.
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    Automated Task Dispatch Pipeline
+                  </h3>
+                  <span className="badge badge-purple" style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #ddd6fe', fontSize: '0.7rem' }}>
+                    Zapier Automation
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                  Tasks in this queue are staged until allotted execution time, then automatically delivered to the employee with real-time sound alerts.
                 </p>
               </div>
             </div>
-            <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem' }}>
-              + Schedule New Task
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="btn btn-primary"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.5rem 1rem',
+                background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
+                border: 'none',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
+              }}
+            >
+              + Allot New Scheduled Task
             </button>
           </div>
 
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-3 sm-grid-cols-1" style={{ gap: '1rem' }}>
+            <div className="glass-card" style={{ padding: '1rem', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>TASKS IN STAGING QUEUE</span>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4f46e5', marginTop: '4px' }}>
+                {scheduledTasks.length}
+              </div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Awaiting automatic dispatch</span>
+            </div>
+            <div className="glass-card" style={{ padding: '1rem', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>TRIGGER POLLING WORKER</span>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
+                Active (10s)
+              </div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Continuous background check</span>
+            </div>
+            <div className="glass-card" style={{ padding: '1rem', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>EARLY TRIGGER OVERRIDE</span>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0284c7', marginTop: '4px' }}>
+                Manual Ready
+              </div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Instant dispatch button available</span>
+            </div>
+          </div>
+
           {scheduledTasks.length === 0 ? (
-            <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <Clock style={{ width: '36px', height: '36px', margin: '0 auto 0.75rem', opacity: 0.4 }} />
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>No Scheduled Tasks in Queue</h4>
-              <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>When you create a task with "Automated Scheduled Dispatch", it will appear here waiting for its trigger time.</p>
+            <div className="glass-panel" style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)', borderRadius: '16px' }}>
+              <Clock style={{ width: '42px', height: '42px', margin: '0 auto 1rem', opacity: 0.35, color: '#4f46e5' }} />
+              <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>No Tasks Currently Scheduled</h4>
+              <p style={{ fontSize: '0.78rem', marginTop: '0.35rem', maxWidth: '420px', margin: '0.35rem auto 1.25rem auto' }}>
+                Create a task using "⚡ Scheduled Dispatch" to allot a future time period. The task will be staged and automatically trigger to the employee.
+              </p>
+              <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-secondary" style={{ fontSize: '0.78rem' }}>
+                + Schedule a Task Now
+              </button>
             </div>
           ) : (
-            <div className="table-container">
+            <div className="table-container" style={{ borderRadius: '14px', overflow: 'hidden' }}>
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Task ID</th>
-                    <th>Title</th>
-                    <th>Target Assignee</th>
+                    <th>Task Title</th>
+                    <th>Target Employee</th>
                     <th>Allotted Trigger Time</th>
                     <th>Priority</th>
-                    <th>Actions</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -326,7 +394,7 @@ export default function ManagerPanelView() {
                     const isPassed = t.scheduledAt && new Date(t.scheduledAt).getTime() <= Date.now();
                     return (
                       <tr key={t.id}>
-                        <td style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--brand-light)' }}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 800, color: '#4f46e5' }}>
                           <span style={{ cursor: 'pointer' }} onClick={() => setSelectedTaskId(t.id)}>{t.id}</span>
                         </td>
                         <td style={{ fontWeight: 700 }}>
@@ -334,12 +402,17 @@ export default function ManagerPanelView() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <img src={assignee?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(assignee?.name || 'User')}`} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%' }} />
-                            <span>{assignee?.name || t.assigneeId}</span>
+                            <img
+                              src={assignee?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(assignee?.name || 'User')}`}
+                              alt=""
+                              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                            <span style={{ fontWeight: 600 }}>{assignee?.name || t.assigneeId}</span>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>({assignee?.role || 'Employee'})</span>
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: isPassed ? '#10b981' : '#8b5cf6', fontWeight: 700 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: isPassed ? '#10b981' : '#4f46e5', fontWeight: 700, background: isPassed ? '#ecfdf5' : '#eef2ff', padding: '3px 8px', borderRadius: '6px' }}>
                             <Clock style={{ width: '13px', height: '13px' }} />
                             <span>{t.scheduledAt ? new Date(t.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Ready'}</span>
                           </div>
@@ -349,21 +422,22 @@ export default function ManagerPanelView() {
                             {t.priority}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'right' }}>
                           <button
                             onClick={() => dispatchScheduledTaskNow(t.id)}
                             className="btn btn-primary"
                             style={{
-                              fontSize: '0.7rem',
-                              padding: '0.25rem 0.65rem',
-                              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              fontSize: '0.72rem',
+                              padding: '0.3rem 0.75rem',
+                              background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
                               border: 'none',
                               color: '#fff',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.3rem',
-                              borderRadius: '6px',
-                              cursor: 'pointer'
+                              gap: '0.35rem',
+                              borderRadius: '7px',
+                              cursor: 'pointer',
+                              fontWeight: 700
                             }}
                           >
                             <Zap style={{ width: '12px', height: '12px' }} />

@@ -22,7 +22,7 @@ export const chatService = {
     return await apiClient.post('/chat/messages', messageData);
   },
 
-  async askAiAssistant({ message, imageUrl, sessionId, channelId, userId, taggedUserId, requireEaFollowup, aiMode = 'auto' }) {
+  async askAiAssistant({ message, imageUrl, sessionId, channelId, userId, taggedUserId, taggedUserName, taggedUserRole, taggedUserDepartment, requireEaFollowup, aiMode = 'auto' }) {
     return await apiClient.post('/chat/ai-assistant', {
       message,
       imageUrl,
@@ -30,6 +30,9 @@ export const chatService = {
       channelId,
       userId,
       taggedUserId,
+      taggedUserName,
+      taggedUserRole,
+      taggedUserDepartment,
       requireEaFollowup,
       aiMode
     });

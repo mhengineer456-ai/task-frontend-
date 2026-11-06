@@ -59,35 +59,35 @@ export default function AutomationsView() {
       </div>
 
       {/* Live Zapier-Style Scheduled Task Triggers */}
-      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid rgba(139, 92, 246, 0.25)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(168, 85, 247, 0.04))' }}>
+      <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderLeft: '4px solid #4f46e5', borderRadius: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Zap style={{ width: '16px', height: '16px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap style={{ width: '18px', height: '18px' }} />
             </div>
             <div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Zapier Scheduled Task Pipeline
-                <span className="badge badge-purple" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                Scheduled Task Triggers (Zapier Automation Engine)
+                <span className="badge badge-purple" style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #ddd6fe' }}>
                   {scheduledTasks.length} Queued
                 </span>
               </h3>
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-                Automated scheduler polls every 10 seconds. Tasks trigger right on time and notify assigned employees.
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                Automated scheduler polls every 10 seconds. Tasks trigger right on time and notify assigned employees with audio chimes.
               </p>
             </div>
           </div>
-          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary" style={{ fontSize: '0.72rem', padding: '0.35rem 0.75rem' }}>
+          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem', background: 'linear-gradient(135deg, #4f46e5, #6366f1)', border: 'none', color: '#fff' }}>
             + Allot New Scheduled Task
           </button>
         </div>
 
         {scheduledTasks.length === 0 ? (
-          <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
             ⚡ No tasks waiting for scheduled dispatch. Click "+ Allot New Scheduled Task" to queue an automated task.
           </div>
         ) : (
-          <div className="table-container" style={{ margin: 0 }}>
+          <div className="table-container" style={{ margin: 0, borderRadius: '12px', overflow: 'hidden' }}>
             <table className="data-table">
               <thead>
                 <tr>
@@ -96,7 +96,7 @@ export default function AutomationsView() {
                   <th>Target Assignee</th>
                   <th>Trigger Time</th>
                   <th>Priority</th>
-                  <th>Manual Override</th>
+                  <th style={{ textAlign: 'right' }}>Manual Override</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,15 +104,24 @@ export default function AutomationsView() {
                   const assignee = users.find(u => u.id === t.assigneeId);
                   return (
                     <tr key={t.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--brand-light)' }}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 800, color: '#4f46e5' }}>
                         <span style={{ cursor: 'pointer' }} onClick={() => setSelectedTaskId(t.id)}>{t.id}</span>
                       </td>
                       <td style={{ fontWeight: 700 }}>
                         <span style={{ cursor: 'pointer' }} onClick={() => setSelectedTaskId(t.id)}>{t.title}</span>
                       </td>
-                      <td>{assignee?.name || t.assigneeId}</td>
                       <td>
-                        <span style={{ color: '#8b5cf6', fontWeight: 700, fontSize: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <img
+                            src={assignee?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(assignee?.name || 'User')}`}
+                            alt=""
+                            style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                          <span>{assignee?.name || t.assigneeId}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ color: '#4f46e5', fontWeight: 700, fontSize: '0.75rem', background: '#eef2ff', padding: '3px 8px', borderRadius: '6px' }}>
                           ⏰ {t.scheduledAt ? new Date(t.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Ready'}
                         </span>
                       </td>
@@ -121,21 +130,26 @@ export default function AutomationsView() {
                           {t.priority}
                         </span>
                       </td>
-                      <td>
+                      <td style={{ textAlign: 'right' }}>
                         <button
                           onClick={() => dispatchScheduledTaskNow(t.id)}
                           className="btn btn-primary"
                           style={{
-                            fontSize: '0.68rem',
-                            padding: '0.2rem 0.55rem',
-                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            fontSize: '0.7rem',
+                            padding: '0.25rem 0.65rem',
+                            background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
                             border: 'none',
                             color: '#fff',
                             borderRadius: '6px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontWeight: 700
                           }}
                         >
-                          ⚡ Dispatch Now
+                          <Zap style={{ width: '12px', height: '12px' }} />
+                          Dispatch Now
                         </button>
                       </td>
                     </tr>
