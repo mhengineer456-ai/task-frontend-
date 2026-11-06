@@ -87,14 +87,34 @@ const extractPdfInfo = (msg) => {
   if (msg?.fileAttachment?.downloadUrl) return msg.fileAttachment;
   if (!msg?.text) return null;
 
-  // 1. Check for Accessory Stock Report PDF link
+  // 1. Check for Accessory Stock Report PDF link OR text containing Verified Accessory Stock
   const accessoryMatch = msg.text.match(/\[(.*?)\]\((https?:\/\/[^\s)]+\/api\/chat\/pdf\/accessory-stock[^\s)]*|.*?\/api\/chat\/pdf\/accessory-stock[^\s)]*)\)/i);
-  if (accessoryMatch) {
+  const stockTableMatch = msg.text.match(/Verified Accessory Stock(?::\s*\*\*?([^\n*]+)\*\*?)?/i) || msg.text.match(/Accessory & Trims Stock Inventory(?::\s*\*\*?([^\n*]+)\*\*?)?/i);
+
+  if (accessoryMatch || stockTableMatch) {
+    let rawTarget = '';
+    let downloadUrl = `${BASE_URL}/chat/pdf/accessory-stock`;
+    if (accessoryMatch) {
+      const uMatch = accessoryMatch[2]?.match(/[?&]category=([^&)]+)/i);
+      if (uMatch) rawTarget = decodeURIComponent(uMatch[1]);
+      if (accessoryMatch[2]?.includes('?')) {
+        const queryPart = accessoryMatch[2].slice(accessoryMatch[2].indexOf('?'));
+        downloadUrl = `${BASE_URL}/chat/pdf/accessory-stock${queryPart}`;
+      }
+    }
+    if (!rawTarget && stockTableMatch && stockTableMatch[1]) {
+      rawTarget = stockTableMatch[1].trim();
+      const cleanTarget = rawTarget.replace(/[^a-zA-Z0-9_\s-]/g, '').trim();
+      if (cleanTarget) {
+        downloadUrl = `${BASE_URL}/chat/pdf/accessory-stock?category=${encodeURIComponent(cleanTarget)}&search=${encodeURIComponent(cleanTarget)}`;
+      }
+    }
+    const cleanTarget = rawTarget.replace(/[^a-zA-Z0-9_\s-]/g, '').trim();
     return {
       type: 'accessory-stock',
-      downloadUrl: `${BASE_URL}/chat/pdf/accessory-stock`,
-      filename: 'Accessory_Stock_Report_With_Photos.pdf',
-      title: 'Accessory & Trims Stock Report (With Photos)'
+      downloadUrl,
+      filename: `Accessory_Stock_${cleanTarget ? cleanTarget.replace(/\s+/g, '_') : 'Report'}_With_Photos.pdf`,
+      title: cleanTarget ? `Accessory & Trims Stock Report (${cleanTarget})` : 'Accessory & Trims Stock Report (With Photos)'
     };
   }
 
@@ -954,83 +974,151 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
         i++;
       }
 
+      // Detect if this table is an accessory / inventory stock table
+      const isStockTable = headers.some(h => /item|material|stock|qty|current stock|threshold|packets/i.test(h));
+      let tableCategory = '';
+      for (let prevIdx = i - rows.length - 2; prevIdx >= Math.max(0, i - rows.length - 15); prevIdx--) {
+        const pLine = lines[prevIdx] || '';
+        const match = pLine.match(/Verified Accessory Stock(?::\s*\*\*?([^\n*]+)\*\*?)?/i) || pLine.match(/###\s*🏷️?\s*(?:Verified Accessory Stock:?\s*)?\*\*?([^\n*]+)\*\*?/i);
+        if (match) {
+          tableCategory = match[1]?.replace(/[^a-zA-Z0-9_\s-]/g, '').trim() || '';
+          break;
+        }
+      }
+
+      const tablePdfUrl = `${BASE_URL}/chat/pdf/accessory-stock?category=${encodeURIComponent(tableCategory || 'ALL')}&search=${encodeURIComponent(tableCategory || '')}`;
+      const tablePdfFilename = `Accessory_Stock_${tableCategory ? tableCategory.replace(/\s+/g, '_') : 'Data'}_Report.pdf`;
+
       elements.push(
         <div
           key={`tbl-${elements.length}`}
           style={{
-            overflowX: 'auto',
-            maxHeight: '480px',
-            overflowY: 'auto',
-            margin: '10px 0',
+            margin: '12px 0',
             borderRadius: '10px',
             border: isSelf ? '1px solid rgba(255,255,255,0.25)' : '1px solid #cbd5e1',
             background: isSelf ? 'rgba(0,0,0,0.16)' : '#ffffff',
-            boxShadow: isSelf ? 'none' : '0 1px 4px rgba(0,0,0,0.06)'
+            boxShadow: isSelf ? 'none' : '0 2px 6px rgba(0,0,0,0.05)',
+            overflow: 'hidden'
           }}
         >
-          <table
+          {isStockTable && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '7px 12px',
+                background: isSelf ? 'rgba(255,255,255,0.09)' : '#f8fafc',
+                borderBottom: isSelf ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e2e8f0',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: isSelf ? '#ffffff' : '#0f172a' }}>
+                  📊 {tableCategory ? `${tableCategory} Stock Data` : 'Verified Inventory'}
+                </span>
+                <span style={{ fontSize: '11px', color: isSelf ? 'rgba(255,255,255,0.7)' : '#64748b' }}>
+                  ({rows.length} {rows.length === 1 ? 'item' : 'items'})
+                </span>
+              </div>
+              <a
+                href={tablePdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={tablePdfFilename}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: isSelf ? '#ffffff' : '#0284c7',
+                  color: isSelf ? '#0284c7' : '#ffffff',
+                  padding: '4px 11px',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  cursor: 'pointer'
+                }}
+                title="Download this verified stock table as PDF"
+              >
+                <Download style={{ width: '12px', height: '12px' }} />
+                <span>Download Stock PDF</span>
+              </a>
+            </div>
+          )}
+          <div
             style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: '12.5px',
-              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-              textAlign: 'left'
+              overflowX: 'auto',
+              maxHeight: '480px',
+              overflowY: 'auto'
             }}
           >
-            <thead>
-              <tr
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 2,
-                  background: isSelf ? '#1e293b' : '#f1f5f9',
-                  borderBottom: isSelf ? '2px solid rgba(255,255,255,0.25)' : '2px solid #cbd5e1'
-                }}
-              >
-                {headers.map((h, hIdx) => (
-                  <th
-                    key={hIdx}
-                    style={{
-                      padding: '8px 12px',
-                      fontWeight: 800,
-                      color: isSelf ? '#ffffff' : '#0f172a',
-                      whiteSpace: 'nowrap',
-                      borderRight: isSelf ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f1f5f9'
-                    }}
-                  >
-                    {formatInlineTokens(h, isSelf, onImageClick, suppressImages)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((rowCells, rIdx) => (
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '12.5px',
+                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                textAlign: 'left'
+              }}
+            >
+              <thead>
                 <tr
-                  key={rIdx}
                   style={{
-                    background: rIdx % 2 === 0
-                      ? 'transparent'
-                      : (isSelf ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
-                    borderBottom: isSelf ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f1f5f9'
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
+                    background: isSelf ? '#1e293b' : '#f1f5f9',
+                    borderBottom: isSelf ? '2px solid rgba(255,255,255,0.25)' : '2px solid #cbd5e1'
                   }}
                 >
-                  {rowCells.map((cell, cIdx) => (
-                    <td
-                      key={cIdx}
+                  {headers.map((h, hIdx) => (
+                    <th
+                      key={hIdx}
                       style={{
-                        padding: '7px 12px',
-                        color: isSelf ? '#f8fafc' : '#1e293b',
+                        padding: '8px 12px',
+                        fontWeight: 800,
+                        color: isSelf ? '#ffffff' : '#0f172a',
                         whiteSpace: 'nowrap',
-                        borderRight: isSelf ? '1px solid rgba(255,255,255,0.05)' : '1px solid #f8fafc'
+                        borderRight: isSelf ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f1f5f9'
                       }}
                     >
-                      {formatInlineTokens(cell, isSelf, onImageClick, suppressImages)}
-                    </td>
+                      {formatInlineTokens(h, isSelf, onImageClick, suppressImages)}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((rowCells, rIdx) => (
+                  <tr
+                    key={rIdx}
+                    style={{
+                      background: rIdx % 2 === 0
+                        ? 'transparent'
+                        : (isSelf ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
+                      borderBottom: isSelf ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f1f5f9'
+                    }}
+                  >
+                    {rowCells.map((cell, cIdx) => (
+                      <td
+                        key={cIdx}
+                        style={{
+                          padding: '7px 12px',
+                          color: isSelf ? '#f8fafc' : '#1e293b',
+                          whiteSpace: 'nowrap',
+                          borderRight: isSelf ? '1px solid rgba(255,255,255,0.05)' : '1px solid #f8fafc'
+                        }}
+                      >
+                        {formatInlineTokens(cell, isSelf, onImageClick, suppressImages)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       );
       continue;
