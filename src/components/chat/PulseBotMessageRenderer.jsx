@@ -35,6 +35,7 @@ import {
 export default function PulseBotMessageRenderer({
   text,
   isSelf = false,
+  pdfInfo = null,
   onImageClick = null,
   onSendFollowup = null,
   onDelete = null
@@ -79,8 +80,8 @@ export default function PulseBotMessageRenderer({
     const lotLineRegex = /^\s*(\d+)\.\s+(?:Lot\s*[:#-]?\s*(\w+)|(\w+))\s*[:|-]\s*(.+)$/i;
 
     // Regex for KPI summary bullets e.g.:
-    // "• **Total Master Orders:** 331 Lots" or "• **Cut Complete: ** 290 Lots" or "* Cut Complete: 290 Lots"
-    const kpiBulletRegex = /^\s*[*•-]\s*[*]*\s*(Total[^:*]+|Cut[^:*]+|Cancelled[^:*]+|Cutting[^:*]+|Pending[^:*]+|WIP[^:*]+)[*]*\s*:\s*[*]*\s*(.+)$/i;
+    // "• **Total Master Orders:** 331 Lots" or "• **Cut Complete: ** 290 Lots" or "• **Barcode Print Pending:** 713 Lots"
+    const kpiBulletRegex = /^\s*[*•-]\s*[*]*\s*(Total[^:*]+|Cut[^:*]+|Cancelled[^:*]+|Cutting[^:*]+|Pending[^:*]+|WIP[^:*]+|Barcode[^:*]+|Print[^:*]+)[*]*\s*:\s*[*]*\s*(.+)$/i;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -119,6 +120,7 @@ export default function PulseBotMessageRenderer({
         let fabric = '';
         let qty = '';
         let emb = '';
+        let barcode = '';
         let note = '';
 
         if (pipes.length >= 2) {
@@ -132,6 +134,8 @@ export default function PulseBotMessageRenderer({
               qty = p.replace(/^(?:qty|quantity)\s*:\s*/i, '').trim();
             } else if (/^(?:emb|embroidery)\s*:/i.test(p)) {
               emb = p.replace(/^(?:emb|embroidery)\s*:\s*/i, '').trim();
+            } else if (/^(?:barcode|bar\s*code)\s*:/i.test(p)) {
+              barcode = p.replace(/^(?:barcode|bar\s*code)\s*:\s*/i, '').trim();
             } else if (!item) {
               item = p;
             } else {
@@ -150,6 +154,7 @@ export default function PulseBotMessageRenderer({
           fabric: fabric || 'Standard Fabric',
           qty: qty || 'Standard Batch',
           emb: emb || 'NA',
+          barcode: barcode || '',
           note
         });
         continue;
@@ -192,12 +197,20 @@ export default function PulseBotMessageRenderer({
       l.jo.toLowerCase().includes(q) ||
       l.item.toLowerCase().includes(q) ||
       l.fabric.toLowerCase().includes(q) ||
-      l.emb.toLowerCase().includes(q)
+      l.emb.toLowerCase().includes(q) ||
+      (l.barcode && l.barcode.toLowerCase().includes(q))
     );
   }, [parsedData.lots, lotSearch]);
 
+  const isBarcodePipeline = useMemo(() => {
+    if (parsedData.lots && parsedData.lots.some(l => l.barcode || (l.note && /barcode/i.test(l.note)))) return true;
+    if (/barcode/i.test(normalizedText) && /print|pending|unprinted/i.test(normalizedText)) return true;
+    return false;
+  }, [parsedData.lots, normalizedText]);
+
   const handleCopyLot = (lotObj) => {
-    const textToCopy = `Lot ${lotObj.lot}: ${lotObj.jo} | ${lotObj.item} | Fabric: ${lotObj.fabric} | Qty: ${lotObj.qty} | Emb: ${lotObj.emb}`;
+    const barcodePart = lotObj.barcode ? ` | Barcode: ${lotObj.barcode}` : (lotObj.emb && lotObj.emb !== 'NA' ? ` | Emb: ${lotObj.emb}` : '');
+    const textToCopy = `Lot ${lotObj.lot}: ${lotObj.jo} | ${lotObj.item} | Fabric: ${lotObj.fabric} | Qty: ${lotObj.qty}${barcodePart}`;
     navigator.clipboard.writeText(textToCopy);
     setCopiedLotId(lotObj.lot);
     setTimeout(() => setCopiedLotId(null), 1800);
@@ -205,9 +218,10 @@ export default function PulseBotMessageRenderer({
 
   const handleCopyAllLots = () => {
     if (!parsedData.lots || parsedData.lots.length === 0) return;
-    const allText = parsedData.lots.map(l =>
-      `Lot ${l.lot}: ${l.jo} | ${l.item} | Fabric: ${l.fabric} | Qty: ${l.qty} | Emb: ${l.emb}`
-    ).join('\n');
+    const allText = parsedData.lots.map(l => {
+      const barcodePart = l.barcode ? ` | Barcode: ${l.barcode}` : (l.emb && l.emb !== 'NA' ? ` | Emb: ${l.emb}` : '');
+      return `Lot ${l.lot}: ${l.jo} | ${l.item} | Fabric: ${l.fabric} | Qty: ${l.qty}${barcodePart}`;
+    }).join('\n');
     navigator.clipboard.writeText(allText);
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
@@ -294,15 +308,21 @@ export default function PulseBotMessageRenderer({
               let cardStyle = 'kpi-card-blue';
               let icon = '📦';
 
-              if (lowerLabel.includes('cut complete') || lowerLabel.includes('complete')) {
+              if (lowerLabel.includes('cut complete') || lowerLabel.includes('printed (confirmed)') || lowerLabel.includes('completed')) {
                 cardStyle = 'kpi-card-green';
                 icon = '✂️';
               } else if (lowerLabel.includes('cancel')) {
                 cardStyle = 'kpi-card-rose';
                 icon = '🚫';
-              } else if (lowerLabel.includes('pending') || lowerLabel.includes('uncut')) {
+              } else if (lowerLabel.includes('print pending') || lowerLabel.includes('barcode print pending')) {
+                cardStyle = 'kpi-card-amber';
+                icon = '🏷️';
+              } else if (lowerLabel.includes('pending') || lowerLabel.includes('uncut') || lowerLabel.includes('not yet generated')) {
                 cardStyle = 'kpi-card-amber';
                 icon = '⏳';
+              } else if (lowerLabel.includes('barcode')) {
+                cardStyle = 'kpi-card-blue';
+                icon = '🏷️';
               }
 
               return (
@@ -329,14 +349,20 @@ export default function PulseBotMessageRenderer({
           <div className="pulsebot-lots-header">
             <div className="pulsebot-lots-title-box">
               <div className="pulsebot-lots-icon-box">
-                <Scissors style={{ width: '16px', height: '16px', color: '#0284c7' }} />
+                {isBarcodePipeline ? (
+                  <Tag style={{ width: '16px', height: '16px', color: '#0284c7' }} />
+                ) : (
+                  <Scissors style={{ width: '16px', height: '16px', color: '#0284c7' }} />
+                )}
               </div>
               <div>
                 <h4 className="pulsebot-lots-heading">
-                  Uncut / Pending Lots Pipeline
+                  {isBarcodePipeline ? 'Cut Complete — Barcode Print Pending Pipeline' : 'Uncut / Pending Lots Pipeline'}
                 </h4>
                 <p className="pulsebot-lots-subheading">
-                  {parsedData.lots.length} Lots queued for cutting floor allocation
+                  {isBarcodePipeline
+                    ? `${parsedData.lots.length} Cut complete lots awaiting barcode sticker printing`
+                    : `${parsedData.lots.length} Lots queued for cutting floor allocation`}
                 </p>
               </div>
             </div>
@@ -376,6 +402,21 @@ export default function PulseBotMessageRenderer({
                 </button>
               </div>
 
+              {/* Export PDF Button */}
+              {(pdfInfo?.downloadUrl || isBarcodePipeline) && (
+                <a
+                  href={pdfInfo?.downloadUrl || `/api/chat/pdf/cut-lots-barcode-pending`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pulsebot-copy-all-btn"
+                  style={{ textDecoration: 'none', background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}
+                  title="Export pipeline to PDF"
+                >
+                  <FileText style={{ width: '13px', height: '13px', color: '#2563eb' }} />
+                  <span>Export PDF</span>
+                </a>
+              )}
+
               {/* Copy All */}
               <button
                 type="button"
@@ -401,7 +442,9 @@ export default function PulseBotMessageRenderer({
                     <th>Garment Style / Item</th>
                     <th style={{ width: '130px' }}>Fabric Spec</th>
                     <th style={{ width: '90px', textAlign: 'center' }}>Quantity</th>
-                    <th style={{ width: '100px', textAlign: 'center' }}>Embroidery</th>
+                    <th style={{ width: isBarcodePipeline ? '145px' : '100px', textAlign: 'center' }}>
+                      {isBarcodePipeline ? 'Barcode Status' : 'Embroidery'}
+                    </th>
                     <th style={{ width: '50px', textAlign: 'center' }}>Action</th>
                   </tr>
                 </thead>
@@ -437,9 +480,26 @@ export default function PulseBotMessageRenderer({
                           </span>
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          <span className={item.emb.toLowerCase() === 'na' ? 'badge-emb-na' : 'badge-emb-active'}>
-                            {item.emb.toLowerCase() === 'na' ? 'No Emb' : `🪡 ${item.emb}`}
-                          </span>
+                          {isBarcodePipeline ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              border: '1px solid #fde68a'
+                            }}>
+                              🏷️ {item.barcode || 'Print Pending'}
+                            </span>
+                          ) : (
+                            <span className={item.emb.toLowerCase() === 'na' ? 'badge-emb-na' : 'badge-emb-active'}>
+                              {item.emb.toLowerCase() === 'na' ? 'No Emb' : `🪡 ${item.emb}`}
+                            </span>
+                          )}
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <button
@@ -502,9 +562,15 @@ export default function PulseBotMessageRenderer({
                       <span className="spec-tag qty">
                         📦 {item.qty}
                       </span>
-                      <span className={item.emb.toLowerCase() === 'na' ? 'spec-tag emb-na' : 'spec-tag emb-active'}>
-                        {item.emb.toLowerCase() === 'na' ? 'Emb: NA' : `🪡 ${item.emb}`}
-                      </span>
+                      {isBarcodePipeline ? (
+                        <span className="spec-tag" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 600 }}>
+                          🏷️ {item.barcode || 'Print Pending'}
+                        </span>
+                      ) : (
+                        <span className={item.emb.toLowerCase() === 'na' ? 'spec-tag emb-na' : 'spec-tag emb-active'}>
+                          {item.emb.toLowerCase() === 'na' ? 'Emb: NA' : `🪡 ${item.emb}`}
+                        </span>
+                      )}
                     </div>
 
                     {item.note && (
@@ -532,27 +598,55 @@ export default function PulseBotMessageRenderer({
       {/* 5. Smart Follow-up Action Chips */}
       {parsedData.lots && parsedData.lots.length > 0 && onSendFollowup && (
         <div className="pulsebot-followup-chips">
-          <button
-            type="button"
-            onClick={() => onSendFollowup('Sir, in 13 uncut lots me se sirf BHM embroidery wale lots filter karke dikhao')}
-            className="followup-chip-btn"
-          >
-            🪡 Filter BHM Embroidery Lots
-          </button>
-          <button
-            type="button"
-            onClick={() => onSendFollowup('MH FLEECE fabric ka current factory stock aur cutting balance check karo')}
-            className="followup-chip-btn"
-          >
-            🧵 Check MH FLEECE Fabric Stock
-          </button>
-          <button
-            type="button"
-            onClick={() => onSendFollowup('Download PDF for these 13 uncut lots')}
-            className="followup-chip-btn"
-          >
-            📄 Export this Lot List to PDF
-          </button>
+          {isBarcodePipeline ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onSendFollowup('ADIDAS brand ke barcode print pending lots dikhao')}
+                className="followup-chip-btn"
+              >
+                🏷️ Filter Adidas Barcode Pending
+              </button>
+              <button
+                type="button"
+                onClick={() => onSendFollowup('overall production summary kitna lot cut hai aur kitna pending hai')}
+                className="followup-chip-btn"
+              >
+                📊 Overall Cutting Summary
+              </button>
+              <button
+                type="button"
+                onClick={() => onSendFollowup('Download PDF for all cut lots whose barcode is not printed')}
+                className="followup-chip-btn"
+              >
+                📄 Export 713 Lots to PDF
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onSendFollowup('Sir, in uncut lots me se sirf BHM embroidery wale lots filter karke dikhao')}
+                className="followup-chip-btn"
+              >
+                🪡 Filter BHM Embroidery Lots
+              </button>
+              <button
+                type="button"
+                onClick={() => onSendFollowup('MH FLEECE fabric ka current factory stock aur cutting balance check karo')}
+                className="followup-chip-btn"
+              >
+                🧵 Check MH FLEECE Fabric Stock
+              </button>
+              <button
+                type="button"
+                onClick={() => onSendFollowup('Download PDF for these uncut lots')}
+                className="followup-chip-btn"
+              >
+                📄 Export this Lot List to PDF
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

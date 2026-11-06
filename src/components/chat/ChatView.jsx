@@ -144,6 +144,18 @@ const extractPdfInfo = (msg) => {
       title: `Job Order & Production Slip (${lotNum === '11029' ? 'JO-2' : 'JO-1'} • Lot ${lotNum})`
     };
   }
+
+  // 4. Check for Barcode Print Pending Pipeline Report PDF link OR text
+  const barcodePendingMatch = msg.text.match(/cut-lots-barcode-pending/i) || msg.text.match(/\b(barcode\s*print\s*pending|cut\s*complete\s*lots\s*—\s*barcode|barcode.*not.*printed|barcode.*pending.*pipeline)\b/i);
+  if (barcodePendingMatch) {
+    return {
+      type: 'barcode_pending',
+      downloadUrl: `${BASE_URL}/chat/pdf/cut-lots-barcode-pending`,
+      filename: `Cut_Lots_Barcode_Print_Pending_Report.pdf`,
+      title: `Cut Complete - Barcode Print Pending Pipeline Report`
+    };
+  }
+
   return null;
 };
 
@@ -3134,6 +3146,7 @@ export default function ChatView() {
                             return (
                               <PulseBotMessageRenderer
                                 text={msg.text}
+                                pdfInfo={pdfInfo}
                                 onSendFollowup={(promptText) => {
                                   setMessageInput(promptText);
                                 }}
