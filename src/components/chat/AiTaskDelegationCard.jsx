@@ -39,7 +39,15 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
     scheduledAt = null
   } = delegatedTask;
 
-  const isTaskScheduled = Boolean((isScheduled || status === 'Scheduled') && !isDispatchedEarly);
+  const isTaskScheduled = Boolean(
+    !isDispatchedEarly &&
+    (
+      status === 'Scheduled' ||
+      String(status).toLowerCase() === 'scheduled' ||
+      Boolean(isScheduled) ||
+      (scheduledAt && (!delegatedTask.dispatchedAt || status === 'Scheduled'))
+    )
+  );
 
   const handleCopyId = (e) => {
     e.stopPropagation();
