@@ -77,11 +77,28 @@ const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥
 
 // Helper to extract PDF attachment info from message object or text
 const extractPdfInfo = (msg) => {
-  if (msg?.pdfAttachment) return msg.pdfAttachment;
+  if (msg?.pdfAttachment) {
+    const att = { ...msg.pdfAttachment };
+    if (att.downloadUrl && (att.downloadUrl.includes('localhost:5000') || att.downloadUrl.startsWith('/'))) {
+      att.downloadUrl = att.downloadUrl.replace(/^https?:\/\/localhost:5000\/api/i, BASE_URL).replace(/^\/api/i, BASE_URL);
+    }
+    return att;
+  }
   if (msg?.fileAttachment?.downloadUrl) return msg.fileAttachment;
   if (!msg?.text) return null;
 
-  // 1. Check for Party Lots Report PDF link
+  // 1. Check for Accessory Stock Report PDF link
+  const accessoryMatch = msg.text.match(/\[(.*?)\]\((https?:\/\/[^\s)]+\/api\/chat\/pdf\/accessory-stock[^\s)]*|.*?\/api\/chat\/pdf\/accessory-stock[^\s)]*)\)/i);
+  if (accessoryMatch) {
+    return {
+      type: 'accessory-stock',
+      downloadUrl: `${BASE_URL}/chat/pdf/accessory-stock`,
+      filename: 'Accessory_Stock_Report_With_Photos.pdf',
+      title: 'Accessory & Trims Stock Report (With Photos)'
+    };
+  }
+
+  // 2. Check for Party Lots Report PDF link
   const partyMatch = msg.text.match(/\[(.*?)\]\((https?:\/\/[^\s)]+\/api\/chat\/pdf\/party\/([^\s)]+)|.*?\/api\/chat\/pdf\/party\/([^\s)]+))\)/i);
   if (partyMatch) {
     const rawPartySlug = decodeURIComponent(partyMatch[3] || partyMatch[4] || 'SS_Party');
@@ -95,7 +112,7 @@ const extractPdfInfo = (msg) => {
     };
   }
 
-  // 2. Check for Single Lot Job Order PDF link
+  // 3. Check for Single Lot Job Order PDF link
   const linkMatch = msg.text.match(/\[(.*?)\]\((https?:\/\/[^\s)]+\/api\/chat\/pdf\/(\d+)|.*?\/api\/chat\/pdf\/(\d+))\)/);
   if (linkMatch) {
     const lotNum = linkMatch[3] || linkMatch[4] || '11028';
@@ -305,6 +322,7 @@ const ChatInlineImage = ({ src, alt, title, onExpand, isSelf }) => {
 const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   if (!gallery || !Array.isArray(gallery) || gallery.length === 0) return null;
 
@@ -345,6 +363,46 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
     ? 'Filter by item/location...'
     : 'Filter by lot/fabric...';
 
+  // Handler to download PDF with verified photos
+  const handleDownloadPdf = async (e) => {
+    e.stopPropagation();
+    if (isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+
+    try {
+      const itemsToExport = filtered.length > 0 ? filtered : gallery;
+      const response = await fetch(`${BASE_URL}/chat/pdf/accessory-stock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: itemsToExport,
+          category: selectedCategory,
+          title: bannerTitle
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const safeCat = String(selectedCategory || 'Catalog').replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.download = `Accessory_Stock_${safeCat}_With_Photos.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('[PDF Export] Direct POST failed, downloading via GET link:', err);
+      window.open(`${BASE_URL}/chat/pdf/accessory-stock?category=${encodeURIComponent(selectedCategory)}`, '_blank');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -376,7 +434,35 @@ const ChatImageGallery = ({ gallery, onImageClick, isSelf }) => {
             {bannerTitle}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Download PDF with Photos Action Button */}
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#ffffff',
+              color: '#0284c7',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '4px 12px',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              cursor: isDownloadingPdf ? 'not-allowed' : 'pointer',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+              transition: 'all 0.15s ease',
+              opacity: isDownloadingPdf ? 0.8 : 1
+            }}
+            title="Download complete PDF catalog with high-resolution stock photos"
+          >
+            <FileText style={{ width: '13px', height: '13px', color: '#dc2626' }} />
+            <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF with Photos'}</span>
+            <Download style={{ width: '12px', height: '12px' }} />
+          </button>
+
           <span style={{ fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.22)', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
             {countBadge}
           </span>
@@ -3177,10 +3263,10 @@ export default function ChatView() {
                               </div>
                               <div>
                                 <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelf ? '#ffffff' : 'var(--text-primary)' }}>
-                                  {pdfInfo.title || `Job Order Slip (Lot ${pdfInfo.lotNumber})`}
+                                  {pdfInfo.title || (pdfInfo.type === 'accessory-stock' ? 'Accessory & Trims Stock Report (With Photos)' : `Job Order Slip (Lot ${pdfInfo.lotNumber})`)}
                                 </div>
                                 <div style={{ fontSize: '0.68rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)' }}>
-                                  {pdfInfo.filename || 'JobOrder.pdf'} • Ready for Download
+                                  {pdfInfo.filename || (pdfInfo.type === 'accessory-stock' ? 'Accessory_Stock_Report_With_Photos.pdf' : 'JobOrder.pdf')} • Ready for Download
                                 </div>
                               </div>
                             </div>
@@ -3194,8 +3280,8 @@ export default function ChatView() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                background: isSelf ? '#ffffff' : 'var(--brand-primary)',
-                                color: isSelf ? 'var(--brand-primary)' : '#ffffff',
+                                background: isSelf ? '#ffffff' : (pdfInfo.type === 'accessory-stock' ? '#0284c7' : 'var(--brand-primary)'),
+                                color: isSelf ? (pdfInfo.type === 'accessory-stock' ? '#0284c7' : 'var(--brand-primary)') : '#ffffff',
                                 padding: '6px 14px',
                                 borderRadius: '8px',
                                 fontSize: '0.78rem',
@@ -3206,7 +3292,7 @@ export default function ChatView() {
                               }}
                             >
                               <Download style={{ width: '14px', height: '14px' }} />
-                              <span>Download PDF</span>
+                              <span>{pdfInfo.type === 'accessory-stock' ? 'Download Stock PDF' : 'Download PDF'}</span>
                             </a>
                           </div>
                         );
