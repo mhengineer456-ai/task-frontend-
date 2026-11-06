@@ -2155,6 +2155,8 @@ export const TaskProvider = ({ children }) => {
       audioUrl: audioUrl || null,
       fileAttachment: fileAttachment || null,
       taskAttachment,
+      taggedUserId: taggedUserId || null,
+      requireEaFollowup: Boolean(requireEaFollowup),
       isAi: false
     }).then(res => {
       if (res && res.success && res.message) {
@@ -2175,7 +2177,7 @@ export const TaskProvider = ({ children }) => {
     const isAiTarget = channelId === 'chan-ai' || channelId.startsWith('chan-ai-');
     if (isAiTarget && (text || imageUrl || taggedUserId)) {
       setTimeout(() => {
-        const promptText = (text || '').trim() || (imageUrl ? 'Please check this image and identify the Lot Number and production details.' : '');
+        const promptText = (text || '').trim() || (imageUrl ? 'Please check this image and identify the Lot Number and production details.' : '') || (taggedUserId ? 'Operational task assignment' : '');
         generatePulseBotAiReply(promptText, imageUrl, taggedUserId, requireEaFollowup, channelId, overrideAiMode || aiQueryMode);
       }, 600);
     }

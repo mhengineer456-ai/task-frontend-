@@ -1538,6 +1538,19 @@ export default function ChatView() {
     const val = e.target.value;
     setMessageInput(val);
 
+    // Auto-detect @ typing for member tagging autocomplete
+    const cursor = e.target.selectionEnd || val.length;
+    const textBeforeCursor = val.slice(0, cursor);
+    const atMatch = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+
+    if (atMatch) {
+      setShowTagMenu(true);
+      setTagSearch(atMatch[1] || '');
+    } else if (showTagMenu && !val.includes('@')) {
+      setShowTagMenu(false);
+      setTagSearch('');
+    }
+
     if (sendTypingStatus && activeUser?.name) {
       sendTypingStatus(activeChannelId, activeUser.name, true);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -1627,7 +1640,7 @@ export default function ChatView() {
 
   const handleSend = (e) => {
     e.preventDefault();
-    if (!messageInput.trim() && !selectedTaskAttach && !selectedImage && !selectedFile) return;
+    if (!messageInput.trim() && !selectedTaskAttach && !selectedImage && !selectedFile && !taggedUser) return;
 
     if (sendTypingStatus && activeUser?.name) {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -1655,6 +1668,7 @@ export default function ChatView() {
     setShowEmojiPicker(false);
     setShowAttachMenu(false);
     setShowTagMenu(false);
+    setTagSearch('');
     isAutoScrollEnabled.current = true;
     setIsAtBottom(true);
     setTimeout(() => scrollToBottom('smooth'), 50);
@@ -3525,6 +3539,207 @@ export default function ChatView() {
             </div>
           )}
 
+          {/* Member Tagging & Task Assignment Popover */}
+          {showTagMenu && (
+            <div
+              ref={tagMenuRef}
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                right: '16px',
+                marginBottom: '10px',
+                width: '340px',
+                maxWidth: 'calc(100vw - 32px)',
+                background: 'var(--bg-card, #ffffff)',
+                border: '1px solid var(--border-color, #cbd5e1)',
+                borderRadius: '16px',
+                padding: '12px',
+                boxShadow: '0 20px 40px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                zIndex: 1050,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                animation: 'fadeIn 0.15s ease'
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '6px', borderBottom: '1px solid var(--border-color, #e2e8f0)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AtSign style={{ width: '13px', height: '13px' }} />
+                  </div>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary, #0f172a)' }}>Assign Task to Team Member</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTagMenu(false);
+                    setTagSearch('');
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted, #94a3b8)', padding: '2px', display: 'flex' }}
+                  title="Close Menu"
+                >
+                  <X style={{ width: '15px', height: '15px' }} />
+                </button>
+              </div>
+
+              {/* Search input filter */}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search style={{ position: 'absolute', left: '10px', width: '13px', height: '13px', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  placeholder="Filter by name, role, department..."
+                  value={tagSearch}
+                  onChange={(e) => setTagSearch(e.target.value)}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '6px 26px 6px 28px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color, #cbd5e1)',
+                    background: 'var(--bg-input, #f8fafc)',
+                    color: 'var(--text-primary, #0f172a)',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    outline: 'none'
+                  }}
+                />
+                {tagSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setTagSearch('')}
+                    style={{ position: 'absolute', right: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '11px', fontWeight: 800 }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Member list */}
+              <div style={{ maxHeight: '210px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {(() => {
+                  const candidateUsers = users.filter(u => String(u.id) !== String(activeUser?.id));
+                  const listToFilter = candidateUsers.length > 0 ? candidateUsers : users;
+                  const filtered = listToFilter.filter(u => {
+                    if (!tagSearch.trim()) return true;
+                    const q = tagSearch.toLowerCase();
+                    return (
+                      (u.name && u.name.toLowerCase().includes(q)) ||
+                      (u.role && u.role.toLowerCase().includes(q)) ||
+                      (u.department && u.department.toLowerCase().includes(q)) ||
+                      (u.email && u.email.toLowerCase().includes(q))
+                    );
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.78rem' }}>
+                        No team members match "{tagSearch}"
+                      </div>
+                    );
+                  }
+
+                  return filtered.map(member => {
+                    const isSelected = taggedUser && String(taggedUser.id) === String(member.id);
+                    const roleLower = (member.role || '').toLowerCase();
+                    const roleColor = roleLower.includes('ea')
+                      ? { bg: '#fef3c7', text: '#b45309' }
+                      : roleLower.includes('manager')
+                      ? { bg: '#eff6ff', text: '#1d4ed8' }
+                      : roleLower.includes('admin')
+                      ? { bg: '#f5f3ff', text: '#6d28d9' }
+                      : { bg: '#ecfdf5', text: '#059669' };
+
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => {
+                          setTaggedUser(member);
+                          setShowTagMenu(false);
+                          setTagSearch('');
+                          if (messageInput.includes('@')) {
+                            const updated = messageInput.replace(/@([a-zA-Z0-9_\s]*)$/, `@${member.name} `);
+                            setMessageInput(updated);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '6px 8px',
+                          borderRadius: '8px',
+                          background: isSelected ? 'var(--brand-glow, #f0f9ff)' : 'transparent',
+                          border: isSelected ? '1px solid #bae6fd' : '1px solid transparent',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease',
+                          width: '100%'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = 'var(--bg-input, #f1f5f9)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                          <div
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: roleColor.text,
+                              color: '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              flexShrink: 0
+                            }}
+                          >
+                            {member.avatar || member.name?.[0]?.toUpperCase() || '👤'}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary, #0f172a)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                              {member.name}
+                            </span>
+                            <span style={{ fontSize: '0.67rem', color: 'var(--text-muted, #64748b)' }}>
+                              {member.department || 'Operations'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span
+                            style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              padding: '2px 5px',
+                              borderRadius: '4px',
+                              background: roleColor.bg,
+                              color: roleColor.text
+                            }}
+                          >
+                            {member.role || 'Member'}
+                          </span>
+                          {isSelected && <Check style={{ width: '13px', height: '13px', color: '#0284c7' }} />}
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Footer info */}
+              <div style={{ paddingTop: '6px', borderTop: '1px solid var(--border-color, #f1f5f9)', fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Zap style={{ width: '11px', height: '11px', color: '#f59e0b' }} />
+                <span>Selecting a member delegates task with live alert & EA follow-up.</span>
+              </div>
+            </div>
+          )}
+
           {/* Hidden inputs */}
           <input
             type="file"
@@ -3882,7 +4097,9 @@ export default function ChatView() {
                   <input
                     type="text"
                     placeholder={
-                      activeChannel.type === 'ai'
+                      taggedUser
+                        ? `Assign task to ${taggedUser.name} (type instructions or hit send)...`
+                        : activeChannel.type === 'ai'
                         ? aiQueryMode === 'production'
                           ? 'Ask about Lots, Cutting Floor, Orders, WIP (Production Mode)...'
                           : aiQueryMode === 'accessory'
@@ -3921,8 +4138,8 @@ export default function ChatView() {
                     }}
                     className="apple-icon-btn whatsapp-icon-btn"
                     style={{
-                      color: taggedUser ? 'var(--brand-primary)' : 'var(--text-secondary)',
-                      background: taggedUser ? 'var(--brand-glow)' : 'none'
+                      color: (taggedUser || showTagMenu) ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                      background: (taggedUser || showTagMenu) ? 'var(--brand-glow)' : 'none'
                     }}
                     title="Tag & Assign Task"
                   >
@@ -3930,8 +4147,8 @@ export default function ChatView() {
                   </button>
                 </div>
 
-                {/* Circular Action Button: Send if text typed, Mic if empty */}
-                {messageInput.trim().length > 0 ? (
+                {/* Circular Action Button: Send if text typed or user tagged, Mic if empty */}
+                {(messageInput.trim().length > 0 || taggedUser) ? (
                   <button
                     type="submit"
                     className="apple-circle-action-btn whatsapp-circle-action-btn"
