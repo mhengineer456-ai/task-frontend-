@@ -235,10 +235,25 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
                 fontSize: '15px',
                 fontWeight: 800,
                 boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
-                flexShrink: 0
+                flexShrink: 0,
+                overflow: 'hidden',
+                position: 'relative'
               }}
             >
-              {assignee.avatar || assignee.name?.[0]?.toUpperCase() || '👤'}
+              {assignee.avatar && (assignee.avatar.startsWith('data:') || assignee.avatar.startsWith('http') || assignee.avatar.startsWith('/')) ? (
+                <img
+                  src={assignee.avatar}
+                  alt={assignee.name || 'avatar'}
+                  style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (assignee.avatar && assignee.avatar.length <= 4) ? (
+                <span>{assignee.avatar}</span>
+              ) : (
+                <span>{assignee.name?.[0]?.toUpperCase() || '👤'}</span>
+              )}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>

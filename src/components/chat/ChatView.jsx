@@ -648,16 +648,16 @@ const formatInlineTokens = (line, isSelf, onImageClick = null, suppressImages = 
             style={{
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
               fontSize: '11px',
-              letterSpacing: '1px',
+              letterSpacing: '0.5px',
               padding: '2px 6px',
               margin: '0 3px',
-              borderRadius: '4px',
-              background: isSelf ? 'rgba(0,0,0,0.35)' : '#0f172a',
-              color: isSelf ? '#7dd3fc' : '#38bdf8',
+              borderRadius: '6px',
+              background: isSelf ? 'rgba(255, 255, 255, 0.15)' : '#f1f5f9',
+              color: isSelf ? '#ffffff' : '#0369a1',
+              border: isSelf ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid #cbd5e1',
               display: 'inline-block',
               verticalAlign: 'baseline',
-              fontWeight: 700,
-              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)'
+              fontWeight: 700
             }}
           >
             {codeContent}
@@ -1124,6 +1124,7 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
         const isSupervisor = lowerKey.includes('supervisor');
         const isQuantity = lowerKey.includes('quantity') || lowerKey.includes('qty') || lowerKey.includes('pcs');
         const isDate = lowerKey.includes('date');
+        const isTaskId = lowerKey === 'task id' || lowerKey === 'taskid' || lowerKey.includes('task id');
 
         elements.push(
           <div
@@ -1139,22 +1140,37 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
             }}
           >
             <span style={{ fontWeight: 800, color: isSelf ? 'rgba(255,255,255,0.92)' : '#475569', minWidth: '85px' }}>
-              {isDate ? '📅 ' : isSupervisor ? '👤 ' : isQuantity ? '📦 ' : isStatus ? '⚡ ' : '• '}
+              {isDate ? '📅 ' : isSupervisor ? '👤 ' : isQuantity ? '📦 ' : isStatus ? '⚡ ' : isTaskId ? '🎯 ' : '• '}
               {rawKey}:
             </span>
 
-            {isStatus ? (
+            {isTaskId ? (
+              <span
+                style={{
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  color: isSelf ? '#ffffff' : '#0369a1',
+                  background: isSelf ? 'rgba(255, 255, 255, 0.15)' : '#e0f2fe',
+                  border: isSelf ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid #bae6fd',
+                  padding: '2px 8px',
+                  borderRadius: '6px'
+                }}
+              >
+                {rawVal.replace(/[`*]/g, '').trim()}
+              </span>
+            ) : isStatus ? (
               /complete|packed|registered|✓/i.test(rawVal) ? (
                 <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '12px', padding: '2px 8px', fontWeight: 800, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  {rawVal}
+                  {rawVal.replace(/\*\*/g, '').trim()}
                 </span>
               ) : /wip|progress|ongoing/i.test(rawVal) ? (
                 <span style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d', borderRadius: '12px', padding: '2px 8px', fontWeight: 800, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  ⏳ {rawVal}
+                  ⏳ {rawVal.replace(/\*\*/g, '').trim()}
                 </span>
               ) : (
                 <span style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '12px', padding: '2px 8px', fontWeight: 800, fontSize: '0.78rem' }}>
-                  {rawVal}
+                  {rawVal.replace(/\*\*/g, '').trim()}
                 </span>
               )
             ) : isQuantity ? (
@@ -3696,10 +3712,25 @@ export default function ChatView() {
                               justifyContent: 'center',
                               fontSize: '11px',
                               fontWeight: 800,
-                              flexShrink: 0
+                              flexShrink: 0,
+                              overflow: 'hidden',
+                              position: 'relative'
                             }}
                           >
-                            {member.avatar || member.name?.[0]?.toUpperCase() || '👤'}
+                            {member.avatar && (member.avatar.startsWith('data:') || member.avatar.startsWith('http') || member.avatar.startsWith('/')) ? (
+                              <img
+                                src={member.avatar}
+                                alt={member.name || 'avatar'}
+                                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (member.avatar && member.avatar.length <= 4) ? (
+                              <span>{member.avatar}</span>
+                            ) : (
+                              <span>{member.name?.[0]?.toUpperCase() || '👤'}</span>
+                            )}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                             <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary, #0f172a)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
@@ -3905,10 +3936,25 @@ export default function ChatView() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '11px',
-                        fontWeight: 800
+                        fontWeight: 800,
+                        overflow: 'hidden',
+                        position: 'relative'
                       }}
                     >
-                      {taggedUser.avatar || taggedUser.name?.[0]?.toUpperCase() || '👤'}
+                      {taggedUser.avatar && (taggedUser.avatar.startsWith('data:') || taggedUser.avatar.startsWith('http') || taggedUser.avatar.startsWith('/')) ? (
+                        <img
+                          src={taggedUser.avatar}
+                          alt={taggedUser.name || 'avatar'}
+                          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (taggedUser.avatar && taggedUser.avatar.length <= 4) ? (
+                        <span>{taggedUser.avatar}</span>
+                      ) : (
+                        <span>{taggedUser.name?.[0]?.toUpperCase() || '👤'}</span>
+                      )}
                     </div>
                     <span style={{ fontWeight: 800, fontSize: '0.8125rem' }}>{taggedUser.name}</span>
                     <span

@@ -2169,10 +2169,25 @@ export default function ChatFloatingWidget() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '10px',
-                            fontWeight: 800
+                            fontWeight: 800,
+                            overflow: 'hidden',
+                            position: 'relative'
                           }}
                         >
-                          {taggedUser.avatar || taggedUser.name?.[0]?.toUpperCase() || '👤'}
+                          {taggedUser.avatar && (taggedUser.avatar.startsWith('data:') || taggedUser.avatar.startsWith('http') || taggedUser.avatar.startsWith('/')) ? (
+                            <img
+                              src={taggedUser.avatar}
+                              alt={taggedUser.name || 'avatar'}
+                              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (taggedUser.avatar && taggedUser.avatar.length <= 4) ? (
+                            <span>{taggedUser.avatar}</span>
+                          ) : (
+                            <span>{taggedUser.name?.[0]?.toUpperCase() || '👤'}</span>
+                          )}
                         </div>
                         <span style={{ fontWeight: 700, fontSize: '0.75rem' }}>{taggedUser.name}</span>
                         <span
@@ -2482,10 +2497,25 @@ export default function ChatFloatingWidget() {
                                         fontSize: '11px',
                                         fontWeight: 800,
                                         boxShadow: '0 1px 4px rgba(2, 132, 199, 0.25)',
-                                        flexShrink: 0
+                                        flexShrink: 0,
+                                        overflow: 'hidden',
+                                        position: 'relative'
                                       }}
                                     >
-                                      {u.avatar || u.name?.[0]?.toUpperCase() || '👤'}
+                                      {u.avatar && (u.avatar.startsWith('data:') || u.avatar.startsWith('http') || u.avatar.startsWith('/')) ? (
+                                        <img
+                                          src={u.avatar}
+                                          alt={u.name || 'avatar'}
+                                          style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }}
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                          }}
+                                        />
+                                      ) : (u.avatar && u.avatar.length <= 4) ? (
+                                        <span>{u.avatar}</span>
+                                      ) : (
+                                        <span>{u.name?.[0]?.toUpperCase() || '👤'}</span>
+                                      )}
                                     </div>
                                     <div>
                                       <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
