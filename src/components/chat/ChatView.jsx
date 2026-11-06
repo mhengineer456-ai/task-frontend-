@@ -671,12 +671,18 @@ const formatInlineTokens = (line, isSelf, onImageClick = null, suppressImages = 
   // 3. Process bold text: **bold**
   const withBold = withCode.flatMap((part, pIdx) => {
     if (typeof part !== 'string') return part;
-    const boldSegments = part.split(/(\*\*.*?\*\*)/g);
+    // Normalize broken bold tokens in this part first
+    const normPart = part
+      .replace(/\*\*([^*:\n]+):\s*\*\*/g, '**$1:**')
+      .replace(/\*\*([^*:\n]+)\s*:\s*\*\*/g, '**$1:**')
+      .replace(/\*\*([^*:\n]+)\s+\*\*/g, '**$1**');
+    const boldSegments = normPart.split(/(\*\*.*?\*\*)/g);
     return boldSegments.map((seg, sIdx) => {
-      if (seg.startsWith('**') && seg.endsWith('**')) {
+      if (seg.startsWith('**') && seg.endsWith('**') && seg.length >= 4) {
         return <strong key={`b-${pIdx}-${sIdx}`} style={{ fontWeight: 800 }}>{seg.slice(2, -2)}</strong>;
       }
-      return seg;
+      // Strip any stray or unclosed asterisks so literal "**" or "*" NEVER display as ugly text/stars
+      return seg.replace(/\*\*/g, '');
     });
   });
 
@@ -795,8 +801,14 @@ const AppleCodeBlock = ({ code, language = 'text' }) => {
 const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages = false) => {
   if (!text) return null;
 
+  // 0. Pre-clean and normalize broken / spaced bold markdown tags
+  let cleanText = text
+    .replace(/\*\*([^*:\n]+):\s*\*\*/g, '**$1:**')
+    .replace(/\*\*([^*:\n]+)\s*:\s*\*\*/g, '**$1:**')
+    .replace(/\*\*([^*:\n]+)\s+\*\*/g, '**$1**');
+
   // 1. Join any markdown images that were broken across lines (e.g. "![AMIRI]\n(https://...)")
-  let cleanText = text.replace(/!\[(.*?)\]\s*\n+\s*\((https?:\/\/[^\s)]+)\)/g, '![$1]($2)');
+  cleanText = cleanText.replace(/!\[(.*?)\]\s*\n+\s*\((https?:\/\/[^\s)]+)\)/g, '![$1]($2)');
 
   // 2. Strip any raw/bare Cloudinary URLs that might be in the text so URLs are NEVER printed to user
   cleanText = cleanText.replace(/(?:^|\s)\(?https?:\/\/res\.cloudinary\.com\/[^\s\)\>]+\)?(?:\s|$)/gm, ' ');
@@ -1060,14 +1072,55 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
       continue;
     }
 
+    // Numbered List Items: 1. Text or 1. Lot 12345: ...
+    const numListMatch = line.match(/^\s*(\d+)\.\s+(.+)$/);
+    if (numListMatch) {
+      const numIdx = numListMatch[1];
+      const itemContent = numListMatch[2].trim();
+      elements.push(
+        <div
+          key={`num-li-${i}`}
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px',
+            margin: '4px 0',
+            lineHeight: '1.5',
+            fontSize: '0.85rem'
+          }}
+        >
+          <span
+            style={{
+              background: isSelf ? 'rgba(255,255,255,0.2)' : '#e0f2fe',
+              color: isSelf ? '#ffffff' : '#0369a1',
+              borderRadius: '6px',
+              padding: '1px 6px',
+              fontWeight: 800,
+              fontSize: '0.75rem',
+              flexShrink: 0,
+              marginTop: '2px'
+            }}
+          >
+            {numIdx}
+          </span>
+          <div style={{ flex: 1, color: isSelf ? '#ffffff' : '#1e293b' }}>
+            {formatInlineTokens(itemContent, isSelf, onImageClick, suppressImages)}
+          </div>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
     // Smart Bullet Points & Key-Value Status Badges
     if (/^\s*[*•-]\s+/.test(line)) {
       const cleanLine = line.replace(/^\s*[*•-]\s+/, '');
       const kvMatch = cleanLine.match(/^([^:]+):\s*(.+)$/);
 
       if (kvMatch) {
-        const rawKey = kvMatch[1].trim();
-        const rawVal = kvMatch[2].trim();
+        const rawKey = kvMatch[1].replace(/[*_#]/g, '').trim();
+        let rawVal = kvMatch[2].replace(/^[:* ]+|[:* ]+$/g, '').trim();
+        rawVal = rawVal.replace(/^\*+\s*/, '').replace(/\s*\*+$/, '');
         const lowerKey = rawKey.toLowerCase();
         const isStatus = lowerKey.includes('status');
         const isSupervisor = lowerKey.includes('supervisor');
@@ -2840,6 +2893,28 @@ export default function ChatView() {
                           );
                         }
 
+                        if (isAi && !isSelf) {
+                          // Dedicated lot pipeline renderer only for garment cutting lot reports
+                          const hasMarkdownTable = /\|[^\n]+\|\s*\n\s*\|[-:\s|]+\|/.test(msg.text);
+                          const isGarmentLotsReport = !hasMarkdownTable && /Lot\s+\d+:\s*(?:JO|\*)/i.test(msg.text);
+
+                          if (isGarmentLotsReport) {
+                            return (
+                              <PulseBotMessageRenderer
+                                text={msg.text}
+                                onSendFollowup={(promptText) => {
+                                  setMessageInput(promptText);
+                                }}
+                                onDelete={() => {
+                                  if (window.confirm('Delete this AI response?')) {
+                                    deleteChatMessage(msg.id, activeChannelId);
+                                  }
+                                }}
+                              />
+                            );
+                          }
+                        }
+
                         if (trackingData) {
                           const { introText, notesText } = splitMessageIntroAndNotes(msg.text, trackingData);
                           return (
@@ -2974,28 +3049,6 @@ export default function ChatView() {
                               </div>
                             </div>
                           );
-                        }
-
-                        if (isAi && !isSelf) {
-                          // Dedicated lot pipeline renderer only for garment cutting lot reports
-                          const hasMarkdownTable = /\|[^\n]+\|\s*\n\s*\|[-:\s|]+\|/.test(msg.text);
-                          const isGarmentLotsReport = !hasMarkdownTable && /Lot\s+\d+:\s*(?:JO|\*)/i.test(msg.text);
-
-                          if (isGarmentLotsReport) {
-                            return (
-                              <PulseBotMessageRenderer
-                                text={msg.text}
-                                onSendFollowup={(promptText) => {
-                                  setMessageInput(promptText);
-                                }}
-                                onDelete={() => {
-                                  if (window.confirm('Delete this AI response?')) {
-                                    deleteChatMessage(msg.id, activeChannelId);
-                                  }
-                                }}
-                              />
-                            );
-                          }
                         }
 
                         return msg.text ? (

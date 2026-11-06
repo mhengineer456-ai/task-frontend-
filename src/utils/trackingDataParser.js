@@ -133,6 +133,16 @@ function parseTrackingDataFromText(text) {
     return null;
   }
 
+  // Safety check: if text is a multi-lot pipeline report (contains multiple lot listings like "1. Lot...", "2. Lot..."),
+  // NEVER parse as a single-lot department tracking card! Multi-lot reports are rendered by PulseBotMessageRenderer.
+  const multiLotMatches = text.match(/(?:^|\n)\s*\d+\.\s*Lot\s*[:#-]?\s*\d+/gi);
+  if (multiLotMatches && multiLotMatches.length >= 2) {
+    return null;
+  }
+  if (/List of \d+ (?:Pending|Uncut|Completed|Active)?\s*Lots/i.test(text)) {
+    return null;
+  }
+
   // Must mention a Lot number and department/production trail
   const hasLot = /(?:lot|lot number|lot no\.?|lot\s*#|#)\s*:?-?\s*([A-Za-z0-9_-]+)/i.test(text);
   const hasTrail = /department|cutting|stitching|packing|process date|audit trail|production journey|job order/i.test(text);
@@ -226,6 +236,10 @@ function parseTrackingDataFromText(text) {
 
     while ((numMatch = numberedRegex.exec(text)) !== null) {
       const dept = numMatch[2].replace(/[*`_#]/g, '').trim();
+      // If item starts with "Lot", it's a lot listing, not a department stage!
+      if (/^lot\s*\d+/i.test(dept)) {
+        return null;
+      }
       const body = numMatch[3] || '';
 
       const dMatch = body.match(/[-*•]?\s*(?:process\s*date|date)\s*:\s*([^\n]+)/i);

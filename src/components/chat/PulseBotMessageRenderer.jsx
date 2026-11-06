@@ -50,11 +50,11 @@ export default function PulseBotMessageRenderer({
     if (!text || typeof text !== 'string') return '';
     return text
       // Fix **Key: ** Val -> **Key**: Val
-      .replace(/\*\*([^*:]+):\s*\*\*/g, '**$1:**')
+      .replace(/\*\*([^*:\n]+):\s*\*\*/g, '**$1:**')
       // Fix **Key : ** -> **Key:**
-      .replace(/\*\*([^*:]+)\s*:\s*\*\*/g, '**$1:**')
-      // Fix trailing spaces inside bold e.g. **text ** -> **text**
-      .replace(/\*\*([^*]+)\s+\*\*/g, '**$1**')
+      .replace(/\*\*([^*:\n]+)\s*:\s*\*\*/g, '**$1:**')
+      // Fix trailing spaces inside bold (DO NOT cross newlines!)
+      .replace(/\*\*([^*:\n]+)\s+\*\*/g, '**$1**')
       // Normalize lot header bullets
       .replace(/^(\d+)\.\s+\*\*Lot\s+(\d+)\*\*/gm, '$1. Lot $2');
   }, [text]);
@@ -81,8 +81,8 @@ export default function PulseBotMessageRenderer({
     const lotLineRegex = /^\s*(\d+)\.\s+(?:Lot\s*[:#-]?\s*(\w+)|(\w+))\s*[:|-]\s*(.+)$/i;
 
     // Regex for KPI summary bullets e.g.:
-    // "• **Total Master Orders:** 331 Lots" or "* **Cut Complete:** 290 Lots"
-    const kpiBulletRegex = /^\s*[*•-]\s+\*{0,2}(Total[^:*]+|Cut[^:*]+|Cancelled[^:*]+|Cutting[^:*]+|Pending[^:*]+|WIP[^:*]+)\*{0,2}\s*:\s*(.+)$/i;
+    // "• **Total Master Orders:** 331 Lots" or "• **Cut Complete: ** 290 Lots" or "* Cut Complete: 290 Lots"
+    const kpiBulletRegex = /^\s*[*•-]\s*[*]*\s*(Total[^:*]+|Cut[^:*]+|Cancelled[^:*]+|Cutting[^:*]+|Pending[^:*]+|WIP[^:*]+)[*]*\s*:\s*[*]*\s*(.+)$/i;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -92,8 +92,9 @@ export default function PulseBotMessageRenderer({
       const kpiMatch = trimmed.match(kpiBulletRegex);
       if (kpiMatch) {
         state = 'kpi';
-        const label = kpiMatch[1].replace(/\*/g, '').trim();
-        const valueWithSub = kpiMatch[2].replace(/\*/g, '').trim();
+        const label = kpiMatch[1].replace(/[*_#]/g, '').trim();
+        let valueWithSub = kpiMatch[2].replace(/[*_#]/g, '').trim();
+        valueWithSub = valueWithSub.replace(/^[:* ]+|[:* ]+$/g, '').trim();
 
         // Extract count number + subtext in parentheses e.g. "290 Lots (Factory floor par...)"
         const parenMatch = valueWithSub.match(/^([^(]+)(?:\(([^)]+)\))?/);
@@ -226,19 +227,25 @@ export default function PulseBotMessageRenderer({
             const trimmed = l.trim();
             if (!trimmed) return <div key={lIdx} style={{ height: '6px' }} />;
 
+            // Clean up broken bold tags before splitting
+            const cleanL = trimmed
+              .replace(/\*\*([^*:\n]+):\s*\*\*/g, '**$1:**')
+              .replace(/\*\*([^*:\n]+)\s+\*\*/g, '**$1**');
+
             // Process inline bold **text**
-            const parts = trimmed.split(/(\*\*.*?\*\*)/g);
+            const parts = cleanL.split(/(\*\*.*?\*\*)/g);
             return (
               <div key={lIdx} style={{ lineHeight: '1.65', margin: '2px 0' }}>
                 {parts.map((p, partIdx) => {
-                  if (p.startsWith('**') && p.endsWith('**')) {
+                  if (p.startsWith('**') && p.endsWith('**') && p.length >= 4) {
                     return (
                       <strong key={partIdx} className="pulsebot-strong">
                         {p.slice(2, -2)}
                       </strong>
                     );
                   }
-                  return <span key={partIdx}>{p}</span>;
+                  // Clean any orphan asterisks so raw stars never display
+                  return <span key={partIdx}>{p.replace(/\*\*/g, '')}</span>;
                 })}
               </div>
             );
