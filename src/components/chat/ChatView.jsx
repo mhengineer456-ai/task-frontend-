@@ -156,6 +156,17 @@ const extractPdfInfo = (msg) => {
     };
   }
 
+  // 5. Check for Cutting Pending (Uncut) Lots Pipeline Report PDF link OR text
+  const uncutPendingMatch = msg.text.match(/uncut-lots-pending/i) || msg.text.match(/\b(cutting\s*pending\s*\(uncut\)|uncut\s*lots\s*pipeline|uncut\s*lots\s*report|cutting\s*pending\s*lots)\b/i);
+  if (uncutPendingMatch) {
+    return {
+      type: 'uncut_pending',
+      downloadUrl: `${BASE_URL}/chat/pdf/uncut-lots-pending`,
+      filename: `Cutting_Pending_Uncut_Lots_Report.pdf`,
+      title: `Cutting Pending (Uncut) Lots Floor Pipeline Report`
+    };
+  }
+
   return null;
 };
 

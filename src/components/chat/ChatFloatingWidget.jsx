@@ -49,7 +49,13 @@ const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥
 
 // Helper to extract PDF attachment info from message object or text
 const extractPdfInfo = (msg) => {
-  if (msg?.pdfAttachment) return msg.pdfAttachment;
+  if (msg?.pdfAttachment) {
+    const att = { ...msg.pdfAttachment };
+    if (att.downloadUrl && (att.downloadUrl.includes('localhost:5000') || att.downloadUrl.startsWith('/'))) {
+      att.downloadUrl = att.downloadUrl.replace(/^https?:\/\/localhost:5000\/api/i, BASE_URL).replace(/^\/api/i, BASE_URL);
+    }
+    return att;
+  }
   if (msg?.fileAttachment?.downloadUrl) return msg.fileAttachment;
   if (!msg?.text) return null;
 
@@ -79,6 +85,29 @@ const extractPdfInfo = (msg) => {
       title: `Job Order & Production Slip (${lotNum === '11029' ? 'JO-2' : 'JO-1'} • Lot ${lotNum})`
     };
   }
+
+  // 3. Barcode Print Pending
+  const barcodePendingMatch = msg.text.match(/cut-lots-barcode-pending/i) || msg.text.match(/\b(barcode\s*print\s*pending|cut\s*complete\s*lots\s*—\s*barcode|barcode.*not.*printed|barcode.*pending.*pipeline)\b/i);
+  if (barcodePendingMatch) {
+    return {
+      type: 'barcode_pending',
+      downloadUrl: `${BASE_URL}/chat/pdf/cut-lots-barcode-pending`,
+      filename: `Cut_Lots_Barcode_Print_Pending_Report.pdf`,
+      title: `Cut Complete - Barcode Print Pending Pipeline Report`
+    };
+  }
+
+  // 4. Cutting Pending (Uncut) Lots
+  const uncutPendingMatch = msg.text.match(/uncut-lots-pending/i) || msg.text.match(/\b(cutting\s*pending\s*\(uncut\)|uncut\s*lots\s*pipeline|uncut\s*lots\s*report|cutting\s*pending\s*lots)\b/i);
+  if (uncutPendingMatch) {
+    return {
+      type: 'uncut_pending',
+      downloadUrl: `${BASE_URL}/chat/pdf/uncut-lots-pending`,
+      filename: `Cutting_Pending_Uncut_Lots_Report.pdf`,
+      title: `Cutting Pending (Uncut) Lots Floor Pipeline Report`
+    };
+  }
+
   return null;
 };
 

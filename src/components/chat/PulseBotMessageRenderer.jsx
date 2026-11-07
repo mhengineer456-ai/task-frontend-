@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { BASE_URL } from '../../api/apiClient';
 import {
   Sparkles,
   Scissors,
@@ -200,6 +201,18 @@ export default function PulseBotMessageRenderer({
     return false;
   }, [parsedData.lots, normalizedText]);
 
+  const pdfDownloadHref = useMemo(() => {
+    if (pdfInfo?.downloadUrl) {
+      if (pdfInfo.downloadUrl.startsWith('http')) return pdfInfo.downloadUrl;
+      const cleanPath = pdfInfo.downloadUrl.replace(/^\/api\/?/i, '');
+      return `${BASE_URL}/${cleanPath}`;
+    }
+    if (isBarcodePipeline) {
+      return `${BASE_URL}/chat/pdf/cut-lots-barcode-pending`;
+    }
+    return `${BASE_URL}/chat/pdf/uncut-lots-pending`;
+  }, [pdfInfo, isBarcodePipeline]);
+
   const handleCopyLot = (lotObj) => {
     const barcodePart = lotObj.barcode ? ` | Barcode: ${lotObj.barcode}` : (lotObj.emb && lotObj.emb !== 'NA' ? ` | Emb: ${lotObj.emb}` : '');
     const textToCopy = `Lot ${lotObj.lot}: ${lotObj.jo} | ${lotObj.item} | Fabric: ${lotObj.fabric} | Qty: ${lotObj.qty}${barcodePart}`;
@@ -395,9 +408,9 @@ export default function PulseBotMessageRenderer({
               </div>
 
               {/* Export PDF Button */}
-              {(pdfInfo?.downloadUrl || isBarcodePipeline) && (
+              {parsedData.lots && parsedData.lots.length > 0 && (
                 <a
-                  href={pdfInfo?.downloadUrl || `/api/chat/pdf/cut-lots-barcode-pending`}
+                  href={pdfDownloadHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="pulsebot-copy-all-btn"
@@ -606,13 +619,18 @@ export default function PulseBotMessageRenderer({
               >
                 📊 Overall Cutting Summary
               </button>
-              <button
-                type="button"
-                onClick={() => onSendFollowup('Download PDF for all cut lots whose barcode is not printed')}
+              <a
+                href={`${BASE_URL}/chat/pdf/cut-lots-barcode-pending`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="followup-chip-btn"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => {
+                  if (onSendFollowup) onSendFollowup('Download PDF for all cut lots whose barcode is not printed');
+                }}
               >
                 📄 Export 713 Lots to PDF
-              </button>
+              </a>
             </>
           ) : (
             <>
@@ -630,13 +648,18 @@ export default function PulseBotMessageRenderer({
               >
                 🧵 Check MH FLEECE Fabric Stock
               </button>
-              <button
-                type="button"
-                onClick={() => onSendFollowup('Download PDF for these uncut lots')}
+              <a
+                href={pdfDownloadHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="followup-chip-btn"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => {
+                  if (onSendFollowup) onSendFollowup('Download PDF for these uncut lots');
+                }}
               >
                 📄 Export this Lot List to PDF
-              </button>
+              </a>
             </>
           )}
         </div>
