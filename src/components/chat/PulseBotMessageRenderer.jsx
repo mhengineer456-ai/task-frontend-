@@ -2,19 +2,12 @@ import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
   Scissors,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Layers,
   Copy,
   Check,
   Search,
   LayoutGrid,
   Table as TableIcon,
   Tag,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
   FileText,
   Trash2
 } from 'lucide-react';
@@ -44,7 +37,6 @@ export default function PulseBotMessageRenderer({
   const [copiedAll, setCopiedAll] = useState(false);
   const [lotSearch, setLotSearch] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
-  const [isExpanded, setIsExpanded] = useState(true);
 
   // 1. Clean and normalize broken markdown bold syntax before parsing
   const normalizedText = useMemo(() => {
