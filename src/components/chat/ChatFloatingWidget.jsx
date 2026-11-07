@@ -1802,6 +1802,7 @@ export default function ChatFloatingWidget() {
                             return (
                               <PulseBotMessageRenderer
                                 text={msg.text}
+                                pdfInfo={extractPdfInfo(msg)}
                                 onSendFollowup={(promptText) => {
                                   setMessageInput(promptText);
                                 }}

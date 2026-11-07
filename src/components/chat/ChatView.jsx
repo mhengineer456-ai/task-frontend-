@@ -3146,7 +3146,7 @@ export default function ChatView() {
                             return (
                               <PulseBotMessageRenderer
                                 text={msg.text}
-                                pdfInfo={pdfInfo}
+                                pdfInfo={extractPdfInfo(msg)}
                                 onSendFollowup={(promptText) => {
                                   setMessageInput(promptText);
                                 }}
