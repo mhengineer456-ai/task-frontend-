@@ -423,7 +423,10 @@ export default function Header({ onOpenNotifications }) {
 
           {/* PulseBot AI Quick Shortcut */}
           <button
-            onClick={() => setActiveView('chat')}
+            onClick={() => {
+              setActiveView('chat');
+              if (typeof window !== 'undefined') window.location.hash = '#chat';
+            }}
             className="btn btn-secondary header-btn-responsive"
             style={{
               background: activeView === 'chat' ? 'linear-gradient(135deg, #2563eb, #0284c7)' : '#ffffff',

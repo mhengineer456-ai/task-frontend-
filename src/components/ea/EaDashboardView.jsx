@@ -95,11 +95,18 @@ export default function EaDashboardView() {
   const mdTasks = tasks;
 
   // Filter tasks based on statusFilter & search
-  const filteredTasks = mdTasks.filter(t => {
+  const filteredTasks = (mdTasks || []).filter(t => {
+    if (!t) return false;
+    const taskTitle = String(t.title || '').toLowerCase();
+    const taskId = String(t.id || '').toLowerCase();
+    const assigneeName = String((users || []).find(u => String(u.id) === String(t.assigneeId))?.name || '').toLowerCase();
+    const q = String(searchQuery || '').toLowerCase().trim();
+
     const matchesSearch =
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (users.find(u => u.id === t.assigneeId)?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      !q ||
+      taskTitle.includes(q) ||
+      taskId.includes(q) ||
+      assigneeName.includes(q);
 
     if (!matchesSearch) return false;
 

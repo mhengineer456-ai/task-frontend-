@@ -58,11 +58,13 @@ export default function AiTaskDelegationCard({ delegatedTask, isSelf = false }) 
 
   const handleOpenTask = (e) => {
     e.stopPropagation();
-    if (setSelectedTaskId) {
-      setSelectedTaskId(taskId);
-    }
     if (setActiveView) {
-      setActiveView('tasks');
+      setActiveView('kanban');
+    }
+    if (setSelectedTaskId && taskId) {
+      setTimeout(() => {
+        setSelectedTaskId(taskId);
+      }, 50);
     }
   };
 

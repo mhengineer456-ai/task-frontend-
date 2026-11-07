@@ -41,9 +41,12 @@ export default function EaPanelView() {
   const todayDateStr = new Date().toISOString().slice(0, 10);
   const dueTodayLogs = followUpLogs.filter(l => l.nextFollowUpDate === todayDateStr);
 
-  const filteredTasks = mdTasks.filter(t => {
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          t.id.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredTasks = (mdTasks || []).filter(t => {
+    if (!t) return false;
+    const taskTitle = String(t.title || '').toLowerCase();
+    const taskId = String(t.id || '').toLowerCase();
+    const q = String(searchQuery || '').toLowerCase().trim();
+    const matchesSearch = !q || taskTitle.includes(q) || taskId.includes(q);
     if (!matchesSearch) return false;
 
     if (filterMode === 'overdue') {

@@ -40,6 +40,7 @@ import DocModal from './components/workspace/DocModal';
 import NoteModal from './components/workspace/NoteModal';
 import ListModal from './components/workspace/ListModal';
 import WorkspaceHubView from './components/workspace/WorkspaceHubView';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 function MainLayout() {
   const {
@@ -110,12 +111,19 @@ function MainLayout() {
     setIsListModalOpen
   });
 
-  // Automatically close any slide-over drawers when navigating between views
+  // Automatically close slide-over drawers when navigating between views,
+  // but preserve selectedTaskId when transitioning to kanban, alltasks, or mytasks
+  const prevViewRef = React.useRef(activeView);
   useEffect(() => {
-    setSelectedTaskId(null);
-    setViewingUserProfile(null);
-    setIsNotificationsOpen(false);
-    setIsMobileMenuOpen(false);
+    if (prevViewRef.current !== activeView) {
+      if (activeView !== 'kanban' && activeView !== 'alltasks' && activeView !== 'mytasks' && activeView !== 'tasks') {
+        setSelectedTaskId(null);
+      }
+      setViewingUserProfile(null);
+      setIsNotificationsOpen(false);
+      setIsMobileMenuOpen(false);
+      prevViewRef.current = activeView;
+    }
   }, [activeView]);
 
   return (
@@ -153,32 +161,46 @@ function MainLayout() {
               : 0
           }}
         >
-          {activeView === 'dashboard' && (
-            (panelMode === 'manager' || activeUser?.role === 'Manager') ? <ManagerPanelView /> :
-            (panelMode === 'employee' || activeUser?.role === 'Employee') ? <EmployeePanelView /> :
-            (panelMode === 'ea' || activeUser?.role === 'EA') ? <EaDashboardView /> :
-            <DashboardView />
-          )}
-          {activeView === 'eaPanel' && (panelMode === 'ea' || activeUser?.role === 'EA') && <EaDashboardView />}
-          {activeView === 'eaPanel' && (panelMode === 'manager' || activeUser?.role === 'Manager') && <ManagerPanelView />}
-          {activeView === 'eaPanel' && (panelMode === 'employee' || activeUser?.role === 'Employee') && <EmployeePanelView />}
-          {activeView === 'chat' && <ChatView />}
-          {activeView === 'status' && <StatusPage />}
-          {activeView === 'managerPanel' && <ManagerPanelView />}
-          {activeView === 'employeePanel' && <EmployeePanelView />}
-          {activeView === 'mytasks' && <MyTasksView />}
-          {activeView === 'alltasks' && <TaskListView />}
-          {activeView === 'kanban' && <TaskKanbanView />}
-          {activeView === 'calendar' && <TaskCalendarView />}
-          {activeView === 'timeline' && <TaskGanttView />}
-          {activeView === 'approvals' && <ApprovalsView />}
-          {activeView === 'teams' && <TeamsWorkloadView />}
-          {activeView === 'leaves' && <LeaveManagementView />}
-          {activeView === 'automations' && <AutomationsView />}
-          {activeView === 'reports' && <ReportsView />}
-          {activeView === 'audit' && <AuditLogsView />}
-          {activeView === 'settings' && <SettingsView />}
-          {activeView === 'workspace' && <WorkspaceHubView />}
+          <ErrorBoundary key={activeView}>
+            {activeView === 'dashboard' && (
+              (panelMode === 'manager' || activeUser?.role === 'Manager') ? <ManagerPanelView /> :
+              (panelMode === 'employee' || activeUser?.role === 'Employee') ? <EmployeePanelView /> :
+              (panelMode === 'ea' || activeUser?.role === 'EA') ? <EaDashboardView /> :
+              <DashboardView />
+            )}
+            {activeView === 'eaPanel' && (panelMode === 'ea' || activeUser?.role === 'EA') && <EaDashboardView />}
+            {activeView === 'eaPanel' && (panelMode === 'manager' || activeUser?.role === 'Manager') && <ManagerPanelView />}
+            {activeView === 'eaPanel' && (panelMode === 'employee' || activeUser?.role === 'Employee') && <EmployeePanelView />}
+            {activeView === 'chat' && <ChatView />}
+            {activeView === 'status' && <StatusPage />}
+            {activeView === 'managerPanel' && <ManagerPanelView />}
+            {activeView === 'employeePanel' && <EmployeePanelView />}
+            {activeView === 'mytasks' && <MyTasksView />}
+            {activeView === 'alltasks' && <TaskListView />}
+            {(activeView === 'kanban' || activeView === 'tasks') && <TaskKanbanView />}
+            {activeView === 'calendar' && <TaskCalendarView />}
+            {activeView === 'timeline' && <TaskGanttView />}
+            {activeView === 'approvals' && <ApprovalsView />}
+            {activeView === 'teams' && <TeamsWorkloadView />}
+            {activeView === 'leaves' && <LeaveManagementView />}
+            {activeView === 'automations' && <AutomationsView />}
+            {activeView === 'reports' && <ReportsView />}
+            {activeView === 'audit' && <AuditLogsView />}
+            {activeView === 'settings' && <SettingsView />}
+            {activeView === 'workspace' && <WorkspaceHubView />}
+
+            {/* Fallback for any unexpected or unmapped view state */}
+            {![
+              'dashboard', 'eaPanel', 'managerPanel', 'employeePanel', 'chat', 'status',
+              'mytasks', 'alltasks', 'kanban', 'tasks', 'calendar', 'timeline',
+              'approvals', 'teams', 'leaves', 'automations', 'reports', 'audit', 'settings', 'workspace'
+            ].includes(activeView) && (
+              (panelMode === 'manager' || activeUser?.role === 'Manager') ? <ManagerPanelView /> :
+              (panelMode === 'employee' || activeUser?.role === 'Employee') ? <EmployeePanelView /> :
+              (panelMode === 'ea' || activeUser?.role === 'EA') ? <EaDashboardView /> :
+              <DashboardView />
+            )}
+          </ErrorBoundary>
 
           {/* Guaranteed Safe Clearance Spacer on Mobile (only for scrollable pages, NOT fixed-dock chat) */}
           {isMobileView && activeView !== 'chat' && (

@@ -50,13 +50,13 @@ export default function TaskCalendarView() {
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
 
   const monthTasks = useMemo(() => {
-    return tasks.filter(t => {
-      if (!t.dueDate) return false;
-      const matchesMonth = t.dueDate.startsWith(monthPrefix);
-      const matchesSearch =
-        !calendarSearch ||
-        t.title.toLowerCase().includes(calendarSearch.toLowerCase()) ||
-        t.id.toLowerCase().includes(calendarSearch.toLowerCase());
+    return (tasks || []).filter(t => {
+      if (!t || !t.dueDate) return false;
+      const matchesMonth = String(t.dueDate).startsWith(monthPrefix);
+      const taskTitle = String(t.title || '').toLowerCase();
+      const taskId = String(t.id || '').toLowerCase();
+      const q = String(calendarSearch || '').toLowerCase().trim();
+      const matchesSearch = !q || taskTitle.includes(q) || taskId.includes(q);
       return matchesMonth && matchesSearch;
     });
   }, [tasks, monthPrefix, calendarSearch]);

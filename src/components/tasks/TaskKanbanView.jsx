@@ -25,11 +25,11 @@ import QuickFollowupModal from './QuickFollowupModal';
 
 export default function TaskKanbanView() {
   const {
-    tasks,
-    statuses,
-    users,
-    departments,
-    notifications,
+    tasks = [],
+    statuses = [],
+    users = [],
+    departments = [],
+    notifications = [],
     changeTaskStatus,
     changeTaskPriority,
     setSelectedTaskId,
@@ -39,6 +39,11 @@ export default function TaskKanbanView() {
     pinnedTaskIds = [],
     togglePinTask
   } = useTaskContext();
+
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeStatuses = Array.isArray(statuses) ? statuses : [];
+  const safeUsers = Array.isArray(users) ? users : [];
+  const safePinnedTaskIds = Array.isArray(pinnedTaskIds) ? pinnedTaskIds : [];
 
   const [selectedDept, setSelectedDept] = useState('All');
   const [selectedPriority, setSelectedPriority] = useState('All');
@@ -74,20 +79,26 @@ export default function TaskKanbanView() {
     }
   };
 
-  // Filter tasks
-  const filteredTasks = tasks.filter(t => {
+  // Filter tasks with ultra-defensive string coercion and safe defaults
+  const filteredTasks = safeTasks.filter(t => {
+    if (!t) return false;
     const matchDept = selectedDept === 'All' || t.department === selectedDept;
     const matchPriority = selectedPriority === 'All' || t.priority === selectedPriority;
+    
+    const taskTitle = String(t.title || '').toLowerCase();
+    const taskIdStr = String(t.id || '').toLowerCase();
+    const searchLower = String(kanbanSearch || '').toLowerCase().trim();
+
     const matchSearch =
-      !kanbanSearch ||
-      t.title.toLowerCase().includes(kanbanSearch.toLowerCase()) ||
-      t.id.toLowerCase().includes(kanbanSearch.toLowerCase());
+      !searchLower ||
+      taskTitle.includes(searchLower) ||
+      taskIdStr.includes(searchLower);
 
     let matchQuick = true;
     if (quickFilter === 'my-tasks') {
-      matchQuick = t.assigneeId === activeUser?.id;
+      matchQuick = String(t.assigneeId) === String(activeUser?.id);
     } else if (quickFilter === 'pinned') {
-      matchQuick = pinnedTaskIds.includes(t.id);
+      matchQuick = safePinnedTaskIds.includes(t.id);
     } else if (quickFilter === 'urgent') {
       matchQuick = t.priority === 'Urgent' || t.priority === 'Critical';
     } else if (quickFilter === 'overdue') {
@@ -97,18 +108,24 @@ export default function TaskKanbanView() {
     return matchDept && matchPriority && matchSearch && matchQuick;
   });
 
-  // Calculate executive KPI metrics
+  // Calculate executive KPI metrics safely
   const kanbanStats = useMemo(() => {
-    const total = tasks.length;
-    const inProgress = tasks.filter(t => t.status === 'In Progress').length;
-    const urgent = tasks.filter(t => t.priority === 'Urgent' || t.priority === 'Critical').length;
-    const overdue = tasks.filter(t => isOverdue(t.dueDate, t.status)).length;
-    const completed = tasks.filter(t => t.status === 'Completed' || t.status === 'Approved').length;
-    const pinned = tasks.filter(t => pinnedTaskIds.includes(t.id)).length;
+    const total = safeTasks.length;
+    const inProgress = safeTasks.filter(t => t?.status === 'In Progress').length;
+    const urgent = safeTasks.filter(t => t?.priority === 'Urgent' || t?.priority === 'Critical').length;
+    const overdue = safeTasks.filter(t => isOverdue(t?.dueDate, t?.status)).length;
+    const completed = safeTasks.filter(t => t?.status === 'Completed' || t?.status === 'Approved').length;
+    const pinned = safeTasks.filter(t => safePinnedTaskIds.includes(t?.id)).length;
     return { total, inProgress, urgent, overdue, completed, pinned };
-  }, [tasks, pinnedTaskIds]);
+  }, [safeTasks, safePinnedTaskIds]);
 
-  const columns = statuses.slice(0, 8);
+  const defaultStatuses = [
+    { id: 'Assigned', label: 'Assigned' },
+    { id: 'In Progress', label: 'In Progress' },
+    { id: 'Review', label: 'Review' },
+    { id: 'Completed', label: 'Completed' }
+  ];
+  const columns = safeStatuses.length > 0 ? safeStatuses.slice(0, 8) : defaultStatuses;
 
   const handleDragStart = (e, taskId) => {
     e.dataTransfer.setData('taskId', taskId);
@@ -129,7 +146,7 @@ export default function TaskKanbanView() {
     e.preventDefault();
     setDragOverColumnId(null);
     const taskId = e.dataTransfer.getData('taskId');
-    if (taskId) changeTaskStatus(taskId, targetStatusId);
+    if (taskId && typeof changeTaskStatus === 'function') changeTaskStatus(taskId, targetStatusId);
   };
 
   const getProgressColor = (pct) => {
@@ -426,12 +443,12 @@ export default function TaskKanbanView() {
       {/* 4. Board Columns Grid */}
       <div className="kanban-board">
         {columns.map(col => {
-          let colTasks = filteredTasks.filter(t => t.status === col.id);
+          let colTasks = filteredTasks.filter(t => t?.status === col.id);
 
           // Pinned tasks sort to the top of each column
           colTasks.sort((a, b) => {
-            const aPinned = pinnedTaskIds.includes(a.id);
-            const bPinned = pinnedTaskIds.includes(b.id);
+            const aPinned = safePinnedTaskIds.includes(a?.id);
+            const bPinned = safePinnedTaskIds.includes(b?.id);
             if (aPinned && !bPinned) return -1;
             if (!aPinned && bPinned) return 1;
             return 0;
@@ -509,12 +526,13 @@ export default function TaskKanbanView() {
                   </div>
                 ) : (
                   colTasks.map(t => {
-                    const assignee = users.find(u => u.id === t.assigneeId);
-                    const isLate = isOverdue(t.dueDate, t.status);
-                    const progressVal = Number(t.progress || 0);
-                    const followups = Array.isArray(t.followups) ? t.followups : [];
+                    if (!t) return null;
+                    const assignee = safeUsers.find(u => String(u?.id) === String(t?.assigneeId));
+                    const isLate = isOverdue(t?.dueDate, t?.status);
+                    const progressVal = Number(t?.progress || 0);
+                    const followups = Array.isArray(t?.followups) ? t.followups : [];
                     const latestFollowup = followups[0];
-                    const isPinned = pinnedTaskIds.includes(t.id);
+                    const isPinned = safePinnedTaskIds.includes(t?.id);
 
                     // Subtask / checklist calculations
                     const checklist = Array.isArray(t.checklist) ? t.checklist : [];
@@ -702,7 +720,7 @@ export default function TaskKanbanView() {
                               <ChevronRight style={{ width: '13px', height: '13px' }} />
                             </button>
                             <button
-                              onClick={() => startTimer(t.id)}
+                              onClick={() => startTimer && startTimer(t.id)}
                               className="btn-icon"
                               title="Start timer"
                               style={{ width: '24px', height: '24px', padding: 0 }}
@@ -710,7 +728,7 @@ export default function TaskKanbanView() {
                               <Play style={{ width: '12px', height: '12px' }} />
                             </button>
                             <button
-                              onClick={() => setSelectedTaskId(t.id)}
+                              onClick={() => setSelectedTaskId && setSelectedTaskId(t.id)}
                               className="btn-icon"
                               title="View details"
                               style={{ width: '24px', height: '24px', padding: 0 }}

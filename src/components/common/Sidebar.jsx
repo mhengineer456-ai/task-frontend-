@@ -315,6 +315,7 @@ export default function Sidebar() {
                       key={item.id}
                       onClick={() => {
                         setActiveView(item.id);
+                        if (typeof window !== 'undefined') window.location.hash = `#${item.id}`;
                         setIsMobileMenuOpen(false);
                       }}
                       title={item.label}

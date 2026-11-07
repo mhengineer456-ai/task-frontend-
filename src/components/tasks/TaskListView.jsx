@@ -113,12 +113,20 @@ export default function TaskListView() {
   };
 
   // Filter tasks
-  let filtered = tasks.filter(t => {
+  let filtered = (tasks || []).filter(t => {
+    if (!t) return false;
+    const taskTitle = String(t.title || '').toLowerCase();
+    const taskId = String(t.id || '').toLowerCase();
+    const taskCategory = String(t.category || '').toLowerCase();
+    const taskDept = String(t.department || '').toLowerCase();
+    const q = String(searchQuery || '').toLowerCase().trim();
+
     const matchesSearch =
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.category && t.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (t.department && t.department.toLowerCase().includes(searchQuery.toLowerCase()));
+      !q ||
+      taskTitle.includes(q) ||
+      taskId.includes(q) ||
+      taskCategory.includes(q) ||
+      taskDept.includes(q);
 
     const matchesDept = filterDepartment === 'All' || t.department === filterDepartment;
     const matchesPriority = filterPriority === 'All' || t.priority === filterPriority;
