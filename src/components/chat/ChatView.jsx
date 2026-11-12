@@ -87,6 +87,38 @@ const extractPdfInfo = (msg) => {
   if (msg?.fileAttachment?.downloadUrl) return msg.fileAttachment;
   if (!msg?.text) return null;
 
+  // 1a. Check for Accessory Issue Logs Report PDF link OR text containing Verified Accessory Issuance History
+  const issueLogsMatch = msg.text.match(/\[(.*?)\]\((https?:\/\/[^\s)]+\/api\/chat\/pdf\/accessory-issue-logs[^\s)]*|.*?\/api\/chat\/pdf\/accessory-issue-logs[^\s)]*)\)/i);
+  const issueHistoryMatch = msg.text.match(/Verified Accessory Issuance History(?:\s*\(Table:\s*issue_logs\))?/i) || msg.text.match(/ke\s*issuance\s*details\s*niche\s*diye\s*gaye\s*hain/i);
+
+  if (issueLogsMatch || issueHistoryMatch) {
+    let rawTarget = '';
+    let downloadUrl = `${BASE_URL}/chat/pdf/accessory-issue-logs`;
+    if (issueLogsMatch) {
+      const uMatch = issueLogsMatch[2]?.match(/[?&]search=([^&)]+)/i) || issueLogsMatch[2]?.match(/[?&]brand=([^&)]+)/i);
+      if (uMatch) rawTarget = decodeURIComponent(uMatch[1]);
+      if (issueLogsMatch[2]?.includes('?')) {
+        const queryPart = issueLogsMatch[2].slice(issueLogsMatch[2].indexOf('?'));
+        downloadUrl = `${BASE_URL}/chat/pdf/accessory-issue-logs${queryPart}`;
+      }
+    }
+    if (!rawTarget) {
+      const brandMatch = msg.text.match(/\*\*([A-Za-z0-9_\s-]+(?:\s*(?:LABELS?|TAGS?|PATCHES?|BUTTONS?|ZIPPERS?|DORI|TRIMS?))?)\*\*\s*ke\s*issuance/i) ||
+                         msg.text.match(/brand\s*\*\*?"?([A-Za-z0-9_\s-]+?)"?\*\*?\s*detect/i);
+      if (brandMatch) rawTarget = brandMatch[1].trim();
+    }
+    const cleanTarget = rawTarget.replace(/[^a-zA-Z0-9_\s-]/g, '').trim();
+    if (!downloadUrl.includes('?') && cleanTarget) {
+      downloadUrl = `${BASE_URL}/chat/pdf/accessory-issue-logs?search=${encodeURIComponent(cleanTarget)}&brand=${encodeURIComponent(cleanTarget)}`;
+    }
+    return {
+      type: 'accessory-issue-logs',
+      downloadUrl,
+      filename: `Accessory_Issue_Logs_${cleanTarget ? cleanTarget.replace(/\s+/g, '_') : 'Report'}.pdf`,
+      title: cleanTarget ? `Accessory Issuance History (${cleanTarget})` : 'Accessory Issuance History Report'
+    };
+  }
+
   // 1. Check for Accessory Stock Report PDF link OR text containing Verified Accessory Stock
   const accessoryMatch = msg.text.match(/\[(.*?)\]\((https?:\/\/[^\s)]+\/api\/chat\/pdf\/accessory-stock[^\s)]*|.*?\/api\/chat\/pdf\/accessory-stock[^\s)]*)\)/i);
   const stockTableMatch = msg.text.match(/Verified Accessory Stock(?::\s*\*\*?([^\n*]+)\*\*?)?/i) || msg.text.match(/Accessory & Trims Stock Inventory(?::\s*\*\*?([^\n*]+)\*\*?)?/i);
@@ -997,20 +1029,70 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
         i++;
       }
 
-      // Detect if this table is an accessory / inventory stock table
-      const isStockTable = headers.some(h => /item|material|stock|qty|current stock|threshold|packets/i.test(h));
-      let tableCategory = '';
-      for (let prevIdx = i - rows.length - 2; prevIdx >= Math.max(0, i - rows.length - 15); prevIdx--) {
-        const pLine = lines[prevIdx] || '';
-        const match = pLine.match(/Verified Accessory Stock(?::\s*\*\*?([^\n*]+)\*\*?)?/i) || pLine.match(/###\s*🏷️?\s*(?:Verified Accessory Stock:?\s*)?\*\*?([^\n*]+)\*\*?/i);
-        if (match) {
-          tableCategory = match[1]?.replace(/[^a-zA-Z0-9_\s-]/g, '').trim() || '';
-          break;
+      // 1. Detect if this table is an Issue Logs / Issuance History table
+      const isIssueLogsTable = headers.some(h => /issued to|issued by|issue date|receiver/i.test(h)) ||
+        lines.slice(Math.max(0, i - rows.length - 15), i).some(l => /issue_logs|issuance history|verified accessory issuance/i.test(l));
+
+      let issueTarget = '';
+      if (isIssueLogsTable) {
+        for (let prevIdx = i - rows.length - 2; prevIdx >= Math.max(0, i - rows.length - 15); prevIdx--) {
+          const pLine = lines[prevIdx] || '';
+          const match = pLine.match(/\*\*([A-Za-z0-9_\s-]+(?:\s*(?:LABELS?|TAGS?|PATCHES?|BUTTONS?|ZIPPERS?|DORI|TRIMS?))?)\*\*\s*ke\s*issuance/i) ||
+                        pLine.match(/Accessory Issuance History(?::\s*\*\*?([^\n*]+)\*\*?)?/i) ||
+                        pLine.match(/brand\s*\*\*?"?([A-Za-z0-9_\s-]+?)"?\*\*?\s*detect/i);
+          if (match) {
+            issueTarget = match[1]?.replace(/[^a-zA-Z0-9_\s-]/g, '').trim() || '';
+            break;
+          }
+        }
+        if (!issueTarget && rows.length > 0) {
+          const firstMatCell = rows[0][2] || '';
+          const mMatch = firstMatCell.match(/\*\*?([A-Za-z0-9_-]+)/);
+          if (mMatch) issueTarget = mMatch[1];
         }
       }
 
-      const tablePdfUrl = `${BASE_URL}/chat/pdf/accessory-stock?category=${encodeURIComponent(tableCategory || 'ALL')}&search=${encodeURIComponent(tableCategory || '')}`;
-      const tablePdfFilename = `Accessory_Stock_${tableCategory ? tableCategory.replace(/\s+/g, '_') : 'Data'}_Report.pdf`;
+      // 2. Detect if this table is an accessory / inventory stock table (NOT issue logs)
+      const isStockTable = !isIssueLogsTable && headers.some(h => /current stock|stock|threshold|packets/i.test(h)) && headers.some(h => /item|material|name/i.test(h));
+      let tableCategory = '';
+      if (isStockTable) {
+        for (let prevIdx = i - rows.length - 2; prevIdx >= Math.max(0, i - rows.length - 15); prevIdx--) {
+          const pLine = lines[prevIdx] || '';
+          const match = pLine.match(/Verified Accessory Stock(?::\s*\*\*?([^\n*]+)\*\*?)?/i) || pLine.match(/###\s*🏷️?\s*(?:Verified Accessory Stock:?\s*)?\*\*?([^\n*]+)\*\*?/i);
+          if (match) {
+            tableCategory = match[1]?.replace(/[^a-zA-Z0-9_\s-]/g, '').trim() || '';
+            break;
+          }
+        }
+      }
+
+      const showTableHeaderBar = isIssueLogsTable || isStockTable;
+
+      const tablePdfUrl = isIssueLogsTable
+        ? `${BASE_URL}/chat/pdf/accessory-issue-logs?search=${encodeURIComponent(issueTarget || '')}&brand=${encodeURIComponent(issueTarget || '')}`
+        : `${BASE_URL}/chat/pdf/accessory-stock?category=${encodeURIComponent(tableCategory || 'ALL')}&search=${encodeURIComponent(tableCategory || '')}`;
+
+      const tablePdfFilename = isIssueLogsTable
+        ? `Accessory_Issue_Logs_${issueTarget ? issueTarget.replace(/\s+/g, '_') : 'Report'}.pdf`
+        : `Accessory_Stock_${tableCategory ? tableCategory.replace(/\s+/g, '_') : 'Data'}_Report.pdf`;
+
+      const tableHeaderTitle = isIssueLogsTable
+        ? `📋 ${issueTarget ? `${issueTarget} ` : ''}Verified Issue Logs`
+        : `📊 ${tableCategory ? `${tableCategory} Stock Data` : 'Verified Inventory'}`;
+
+      const tableCountLabel = isIssueLogsTable
+        ? `(${rows.length} ${rows.length === 1 ? 'entry' : 'entries'})`
+        : `(${rows.length} ${rows.length === 1 ? 'item' : 'items'})`;
+
+      const tableButtonLabel = isIssueLogsTable
+        ? 'Download Issue Logs PDF'
+        : 'Download Stock PDF';
+
+      const tableButtonTitle = isIssueLogsTable
+        ? 'Download verified issuance history report as PDF'
+        : 'Download this verified stock table as PDF';
+
+      const tableButtonBg = isIssueLogsTable ? '#4f46e5' : '#0284c7';
 
       elements.push(
         <div
@@ -1024,7 +1106,7 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
             overflow: 'hidden'
           }}
         >
-          {isStockTable && (
+          {showTableHeaderBar && (
             <div
               style={{
                 display: 'flex',
@@ -1039,10 +1121,10 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 800, color: isSelf ? '#ffffff' : '#0f172a' }}>
-                  📊 {tableCategory ? `${tableCategory} Stock Data` : 'Verified Inventory'}
+                  {tableHeaderTitle}
                 </span>
                 <span style={{ fontSize: '11px', color: isSelf ? 'rgba(255,255,255,0.7)' : '#64748b' }}>
-                  ({rows.length} {rows.length === 1 ? 'item' : 'items'})
+                  {tableCountLabel}
                 </span>
               </div>
               <a
@@ -1054,8 +1136,8 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  background: isSelf ? '#ffffff' : '#0284c7',
-                  color: isSelf ? '#0284c7' : '#ffffff',
+                  background: isSelf ? '#ffffff' : tableButtonBg,
+                  color: isSelf ? tableButtonBg : '#ffffff',
                   padding: '4px 11px',
                   borderRadius: '6px',
                   fontSize: '11.5px',
@@ -1064,10 +1146,10 @@ const renderFormattedMessageText = (text, isSelf, onImageClick, suppressImages =
                   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   cursor: 'pointer'
                 }}
-                title="Download this verified stock table as PDF"
+                title={tableButtonTitle}
               >
                 <Download style={{ width: '12px', height: '12px' }} />
-                <span>Download Stock PDF</span>
+                <span>{tableButtonLabel}</span>
               </a>
             </div>
           )}
@@ -3375,10 +3457,10 @@ export default function ChatView() {
                               </div>
                               <div>
                                 <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isSelf ? '#ffffff' : 'var(--text-primary)' }}>
-                                  {pdfInfo.title || (pdfInfo.type === 'accessory-stock' ? 'Accessory & Trims Stock Report (With Photos)' : `Job Order Slip (Lot ${pdfInfo.lotNumber})`)}
+                                  {pdfInfo.title || (pdfInfo.type === 'accessory-issue-logs' ? 'Accessory Issuance History Report' : (pdfInfo.type === 'accessory-stock' ? 'Accessory & Trims Stock Report (With Photos)' : (pdfInfo.type === 'barcode_pending' ? 'Cut Lots Barcode Pending Report' : (pdfInfo.type === 'uncut_pending' ? 'Cutting Floor Pending Lots Report' : `Job Order Slip (Lot ${pdfInfo.lotNumber})`))))}
                                 </div>
                                 <div style={{ fontSize: '0.68rem', color: isSelf ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)' }}>
-                                  {pdfInfo.filename || (pdfInfo.type === 'accessory-stock' ? 'Accessory_Stock_Report_With_Photos.pdf' : 'JobOrder.pdf')} • Ready for Download
+                                  {pdfInfo.filename || (pdfInfo.type === 'accessory-issue-logs' ? 'Accessory_Issue_Logs_Report.pdf' : (pdfInfo.type === 'accessory-stock' ? 'Accessory_Stock_Report_With_Photos.pdf' : 'JobOrder.pdf'))} • Ready for Download
                                 </div>
                               </div>
                             </div>
@@ -3392,8 +3474,8 @@ export default function ChatView() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                background: isSelf ? '#ffffff' : (pdfInfo.type === 'accessory-stock' ? '#0284c7' : 'var(--brand-primary)'),
-                                color: isSelf ? (pdfInfo.type === 'accessory-stock' ? '#0284c7' : 'var(--brand-primary)') : '#ffffff',
+                                background: isSelf ? '#ffffff' : (pdfInfo.type === 'accessory-issue-logs' ? '#4f46e5' : (pdfInfo.type === 'accessory-stock' ? '#0284c7' : 'var(--brand-primary)')),
+                                color: isSelf ? (pdfInfo.type === 'accessory-issue-logs' ? '#4f46e5' : (pdfInfo.type === 'accessory-stock' ? '#0284c7' : 'var(--brand-primary)')) : '#ffffff',
                                 padding: '6px 14px',
                                 borderRadius: '8px',
                                 fontSize: '0.78rem',
@@ -3404,7 +3486,7 @@ export default function ChatView() {
                               }}
                             >
                               <Download style={{ width: '14px', height: '14px' }} />
-                              <span>{pdfInfo.type === 'accessory-stock' ? 'Download Stock PDF' : 'Download PDF'}</span>
+                              <span>{pdfInfo.type === 'accessory-issue-logs' ? 'Download Issue Logs PDF' : (pdfInfo.type === 'accessory-stock' ? 'Download Stock PDF' : (pdfInfo.type === 'barcode_pending' ? 'Download Barcode Report PDF' : (pdfInfo.type === 'uncut_pending' ? 'Download Uncut Lots PDF' : 'Download PDF')))}</span>
                             </a>
                           </div>
                         );
