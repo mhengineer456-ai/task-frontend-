@@ -203,8 +203,12 @@ export default function PulseBotMessageRenderer({
 
   const pdfDownloadHref = useMemo(() => {
     if (pdfInfo?.downloadUrl) {
-      if (pdfInfo.downloadUrl.startsWith('http')) return pdfInfo.downloadUrl;
-      const cleanPath = pdfInfo.downloadUrl.replace(/^\/api\/?/i, '');
+      let url = pdfInfo.downloadUrl;
+      if (url.includes('localhost:5000')) {
+        url = url.replace(/^https?:\/\/localhost:5000\/api/i, BASE_URL).replace(/^https?:\/\/localhost:5000/i, BASE_URL);
+      }
+      if (url.startsWith('http')) return url;
+      const cleanPath = url.replace(/^\/api\/?/i, '');
       return `${BASE_URL}/${cleanPath}`;
     }
     if (isBarcodePipeline) {
